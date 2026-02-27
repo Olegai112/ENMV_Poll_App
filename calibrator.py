@@ -1,4 +1,5 @@
 from serial import Serial
+from struct import pack
 
 class Calibrator:
     def __init__(self, **kwargs):
@@ -19,12 +20,36 @@ class Calibrator:
         for i in range(len(command)):
             self.client.write(bytes([command[i]]))
             response.extend(self.client.read(1))
-        return bytes(response)
+        checksum = sum(response[-2:-6:-1]) % 256 == response[-1]
+        return bytes(response), checksum
 
     def disconnect(self):
         self.client.close()
 
-    def command_select(self, choice):
-        if choice == 40:
-            command = [40, 0, 40, 40, 40, 40, 40]
+# КОМАНДЫ КАЛИБРАТОРА
+    # Команды измерения физических величин
+
+    def command_40(self, calibrate = 0):
+        # Команда №40 – Измерение силы тока (диапазон -22 … 22 мА)
+        command = [40] + [calibrate] + [40]*5
         return command
+
+
+
+    # Команды воспроизведения физических величин
+
+    def command_46(self, value = 0):
+        # Команда №46 – Установка целевого значения для режима воспроизведения силы тока
+        command = [46] + list(pack('<f', value)) + [46]
+        return command
+
+    def command_49(self):
+        #  Команда №49 – Уточнение воспроизводимого значения силы тока
+        command = [49]*6
+        return command
+
+    def command_49(self):
+        #  Команда №49 – Уточнение воспроизводимого значения силы тока
+        command = [49] * 6
+        return command
+

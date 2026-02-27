@@ -72,9 +72,9 @@ class Device:
     def calculate_crc(data):
         crc = 0xFFFF
         for byte in data:
-            crc ^= byte  # XOR с очередным байтом
+            crc ^= byte
             for _ in range(8):
-                if crc & 0x0001:  # Если младший бит = 1
+                if crc & 0x0001:
                     crc = (crc >> 1) ^ 0xA001
                 else:
                     crc >>= 1
