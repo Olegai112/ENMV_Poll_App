@@ -1,0 +1,30 @@
+{
+  "device":{
+    "PROTOCOL": "USB",
+    "RTU_COM": "COM7",
+    "RTU_BAUDRATE": 115200,
+    "RTU_TIMEOUT": 0.1,
+    "TCP_IP": "172.17.1.128",
+    "TCP_PORT": 502,
+    "TCP_TIMEOUT": 1,
+    "VID": "0x265e",
+    "PID": "0xd160",
+    "SLAVE_ID": 1,
+    "FUNCTION": "100",
+    "START_ADRESS": 45000,
+    "REG_COUNT": 32
+  },
+  "calibrator": {
+    "COMMAND_40": ""
+  },
+
+
+  "passage_values": {
+    "POSITIVE_START": 22,
+    "POSITIVE_END": 1,
+    "POSITIVE_STEP": 1,
+    "NEGATIVE_START": 0,
+    "NEGATIVE_END": -22,
+    "NEGATIVE_STEP": 1
+  }
+}
