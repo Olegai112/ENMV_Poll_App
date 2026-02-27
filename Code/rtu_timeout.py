@@ -15,3 +15,6 @@ def calculate_timeouts_rtu(baudrate):
 
 res = calculate_timeouts(115200)
 print(res['inter_char_timeout'])
+
+
+# как работают модули в пайтон
