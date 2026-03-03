@@ -21,15 +21,15 @@ class Calibrator:
             self.client.write(bytes([command[i]]))
             response.extend(self.client.read(1))
         checksum = sum(response[-2:-6:-1]) % 256 == response[-1]
-        return bytes(response), checksum
+        return bytes(response)
 
     def disconnect(self):
         self.client.close()
 
 # КОМАНДЫ КАЛИБРАТОРА
     # Команды измерения физических величин
-
-    def command_40(self, calibrate = 0):
+    @staticmethod
+    def command_40(calibrate = 0):
         # Команда №40 – Измерение силы тока (диапазон -22 … 22 мА)
         command = [40] + [calibrate] + [40]*5
         return command
@@ -37,18 +37,20 @@ class Calibrator:
 
 
     # Команды воспроизведения физических величин
-
-    def command_46(self, value = 0):
+    @ staticmethod
+    def command_46(value = 0):
         # Команда №46 – Установка целевого значения для режима воспроизведения силы тока
         command = [46] + list(pack('<f', value)) + [46]
         return command
 
-    def command_49(self):
+    @staticmethod
+    def command_49():
         #  Команда №49 – Уточнение воспроизводимого значения силы тока
         command = [49]*6
         return command
 
-    def command_49(self):
+    @staticmethod
+    def command_49():
         #  Команда №49 – Уточнение воспроизводимого значения силы тока
         command = [49] * 6
         return command

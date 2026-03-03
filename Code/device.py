@@ -1,4 +1,5 @@
 from serial import Serial
+from struct import pack
 import socket, hid
 
 class Device:
@@ -18,10 +19,17 @@ class Device:
         self.vid = kwargs.get("VID")
         self.pid = kwargs.get("PID")
 
+        self.manually_send = kwargs.get("MANUALLY_SEND")
         self.slave_id = kwargs.get("SLAVE_ID").to_bytes(1)
         self.function = int(kwargs.get("FUNCTION")).to_bytes(1)
         self.start_adress = kwargs.get("START_ADRESS").to_bytes(2)
         self.reg_count = kwargs.get("REG_COUNT").to_bytes(2)
+
+        self.ao_mode = kwargs.get("AO_MODE")
+        self.ao_range = kwargs.get("AO_RANGE").to_bytes(1)
+        self.ao_coefficients = kwargs.get("AO_COEFFICIENTS").to_bytes(1)
+        self.ao_esx_id = kwargs.get("AO_ESX_ID").to_bytes(1)
+
 
         self.client = None
 
@@ -38,18 +46,26 @@ class Device:
             self.client = hid.device()
             self.client.open(int(self.vid, 16), int(self.pid, 16))
 
-    def send(self):
-        request_bytes = self.slave_id + self.function + self.start_adress + self.reg_count
+    def send(self, request_data = None):
+        if not self.manually_send:
+            request_data = self.slave_id + self.function + self.start_adress + self.reg_count
+
+        if self.ao_mode == 'ENMV':
+            request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range + self.ao_coefficients + pack('<f', request_data)
+        if self.ao_mode == 'ESX':
+            request_data = self.ao_esx_id + b'\x03\x04' + pack('<f', request_data)
+            print(request_data.hex())
 
         if self.protocol == 'RTU':
-            request = request_bytes + self.calculate_crc(request_bytes)
+            request = request_data + self.calculate_crc(request_data)
             self.client.write(request)
+            print(request.hex())
         elif self.protocol == 'TCP':
-            request = bytes([0, 1, 0, 0]) + len(request_bytes).to_bytes(2) + request_bytes
+            request = bytes([0, 1, 0, 0]) + len(request_data).to_bytes(2) + request_data
             self.client.sendall(request)
         elif self.protocol == 'USB':
             # _ = self.client.read(64, 100)
-            no_header = request_bytes + self.calculate_crc(request_bytes)
+            no_header = request_data + self.calculate_crc(request_data)
             request = bytes([1, 0, len(no_header), 0]) + no_header
             hid_data = request.ljust(64, b'\x00')
             print(hid_data.hex())
