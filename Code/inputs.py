@@ -33,12 +33,12 @@ if parameter == "current":
     i = None
     set_value = calibrator.command_46()
     read_value = calibrator.command_49()
-# elif:
-#     set_value = calibrator.command_47(i)
-#     read_value = calibrator.command_50()
-# elif:
-#     set_value = calibrator.command_48(i)
-#     read_value = calibrator.command_51()
+elif:
+    set_value = calibrator.command_47(i)
+    read_value = calibrator.command_50()
+elif:
+    set_value = calibrator.command_48(i)
+    read_value = calibrator.command_51()
 else:
     print("no command")
 
@@ -49,8 +49,8 @@ while True:
         calibrator.send_response(set_value)
         while True:
             current_value = calibrator.send_response(read_value)
-            # if abs(current_value - i) <= 0.0001:
-            break
+            if abs(current_value - i) <= 0.0001:
+                break
         print(f"Установлено: {current_value}")
         print(f"Запрос измерений...")
         device.send()
@@ -61,7 +61,7 @@ while True:
         break
     else:
         points = positive_start, positive_end, positive_step
-        second_start = False
+        two_pass = False
 
 calibrator.disconnect()
 device.disconnect()

@@ -36,33 +36,34 @@ if parameter == "current":
     set_value = calibrator.command_46(i)
     read_value = calibrator.command_49()
     measure_value = calibrator.command_40(1) # TODO калибровка
-# elif parameter == "voltage":
-#     set_value = calibrator.command_47(i)
-#     read_value = calibrator.command_50()
-#     measure_value = calibrator.command_40()
-# elif parameter == "resistance":
-#     set_value = calibrator.command_48(i)
-#     read_value = calibrator.command_51()
-#     measure_value = calibrator.command_40()
+elif parameter == "voltage":
+    set_value = calibrator.command_47(i)
+    read_value = calibrator.command_50()
+    measure_value = calibrator.command_40()
+elif parameter == "resistance":
+    set_value = calibrator.command_48(i)
+    read_value = calibrator.command_51()
+    measure_value = calibrator.command_40()
 else:
     print("no command")
 
 points = negative_start, negative_end, negative_step
 
 print('Калибровка...')
-# calibrator.send_response(measure_value)
+calibrator.send_response(measure_value)
 for i in float_range(*points):
     print(f"Установка... {i}")
     device.send(i)
     while True:
-        # current_value = calibrator.send_response(measure_value)
-        # if abs(current_value - i) <= 0.0005:
-        break
+        current_value = calibrator.send_response(measure_value)
+        if abs(current_value - i) <= 0.0005:
+            break
     print(f"Установлено: {i}")
     time.sleep(2)
     print(f"Запрос измерений...")
-    # measured_value = calibrator.send_response(measure_value)
-    # print(f"Измерения: {measured_value}")
+    measured_value = calibrator.send_response(measure_value)
+    print(f"Измерения: {measured_value}")
 
 # calibrator.disconnect()
 device.disconnect()
+

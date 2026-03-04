@@ -1,20 +1,22 @@
 {
   "device":{
     "PROTOCOL": "RTU",
+
     "RTU_COM": "COM7",
     "RTU_BAUDRATE": 115200,
     "RTU_TIMEOUT": 0.1,
-    "TCP_IP": "172.17.1.170",
+    "TCP_IP": "172.17.1.128",
     "TCP_PORT": 502,
     "TCP_TIMEOUT": 1,
     "VID": "0x265e",
-    "PID": "0xd160",
+    "PID": "0xd880",
 
-    "MANUALLY_SEND": true,
+    "MANUALLY_SEND": false,
+
     "SLAVE_ID": 1,
-    "FUNCTION": "100",
+    "FUNCTION": "03",
     "START_ADRESS": 0,
-    "REG_COUNT": 2,
+    "REG_COUNT": 16,
 
     "AO_MODE": "ESX",
     "AO_RANGE": 1,
@@ -22,9 +24,6 @@
     "AO_ESX_ID": 2
   },
 
-  "calibrator": {
-    "COMMAND_40": ""
-  },
 
   "NEGATIVE_START": 3,
   "NEGATIVE_END": 0,
@@ -32,7 +31,9 @@
   "POSITIVE_START": 0,
   "POSITIVE_END": 3,
   "POSITIVE_STEP": 1,
-  "TWO_PASS": true,
+  "TWO_PASS": false,
+  "NUM_OF_POINTS": 2,
+
   "PARAMETER": "current"
 
 

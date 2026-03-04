@@ -1,5 +1,5 @@
 from serial import Serial
-from struct import pack
+from struct import pack, unpack
 import socket, hid
 
 class Device:
@@ -21,7 +21,7 @@ class Device:
 
         self.manually_send = kwargs.get("MANUALLY_SEND")
         self.slave_id = kwargs.get("SLAVE_ID").to_bytes(1)
-        self.function = int(kwargs.get("FUNCTION")).to_bytes(1)
+        self.function = bytes.fromhex(kwargs.get("FUNCTION"))
         self.start_adress = kwargs.get("START_ADRESS").to_bytes(2)
         self.reg_count = kwargs.get("REG_COUNT").to_bytes(2)
 
@@ -48,18 +48,16 @@ class Device:
 
     def send(self, request_data = None):
         if not self.manually_send:
-            request_data = self.slave_id + self.function + self.start_adress + self.reg_count
-
-        if self.ao_mode == 'ENMV':
-            request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range + self.ao_coefficients + pack('<f', request_data)
-        if self.ao_mode == 'ESX':
-            request_data = self.ao_esx_id + b'\x03\x04' + pack('<f', request_data)
-            print(request_data.hex())
+            if self.ao_mode == 'OFF':
+                request_data = self.slave_id + self.function + self.start_adress + self.reg_count
+            elif self.ao_mode == 'ENMV':
+                request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range + self.ao_coefficients + pack('<f', request_data)
+            elif self.ao_mode == 'ESX':
+                request_data = self.ao_esx_id + b'\x03\x04' + pack('>f', request_data) # !возможно ошибка с big-endian!
 
         if self.protocol == 'RTU':
             request = request_data + self.calculate_crc(request_data)
             self.client.write(request)
-            print(request.hex())
         elif self.protocol == 'TCP':
             request = bytes([0, 1, 0, 0]) + len(request_data).to_bytes(2) + request_data
             self.client.sendall(request)
@@ -68,21 +66,37 @@ class Device:
             no_header = request_data + self.calculate_crc(request_data)
             request = bytes([1, 0, len(no_header), 0]) + no_header
             hid_data = request.ljust(64, b'\x00')
-            print(hid_data.hex())
             self.client.write(hid_data)
 
     def recieve(self):
         if self.protocol == 'RTU':
             response = self.client.read(69)     # TODO подогнать параметры приема
+            raw_values = response[3:len(response)-2]
         elif self.protocol == 'TCP':
             response = self.client.recv(1024)
+            raw_values = response[9:]
         elif self.protocol == 'USB':
-            response = bytes(self.client.read(64, 1000))    # TODO принимать два пакета USB
-        return response
+            packet1 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
+            packet2 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
+            response = packet1 + b'\x00\x00\x00\x00\x00' + packet2
+            raw_values = packet1[7:]+packet2[2:]
+            raw_values = raw_values[:len(raw_values) - 2]
+        return response, raw_values
 
     def disconnect(self):
         if self.protocol in ('RTU','TCP', 'USB'):
             self.client.close()
+
+    @staticmethod
+    def value_unpack_float(raw_values):
+        values = []
+        for i in range(0, len(raw_values), 4):
+            bytes_value = raw_values[i:i + 4]
+            byte_swap = bytes([bytes_value[1]] + [bytes_value[0]] + [bytes_value[3]] + [bytes_value[2]])
+            unpack_value = unpack('<f', byte_swap)[0]
+            values.append(unpack_value)
+        return values
+
 
     @staticmethod
     def calculate_crc(data):
