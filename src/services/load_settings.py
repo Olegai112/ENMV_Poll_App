@@ -2,7 +2,7 @@ from json import load
 
 
 class Settings:
-    def __init__(self, path = 'config.json'):
+    def __init__(self, path = 'C:/Users/o.melnik/PycharmProjects/ENMV_Poll_App/config.json'):
         self.path = path
         with open(self.path, 'r', encoding='utf-8') as f:
             self.config = load(f)

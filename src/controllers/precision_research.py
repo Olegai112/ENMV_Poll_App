@@ -1,7 +1,7 @@
-from load_settings import config
-from device import Device
-from calibrator import Calibrator
-from data_collect import save_data
+from src.services.load_settings import config
+from src.models.device import Device
+from src.models.calibrator import Calibrator
+from src.services.data_collect import writer
 
 
 device = Device(**config.config["device"])
@@ -48,7 +48,7 @@ if device.ao_mode != "OFF" :
             current_value2 = calibrator.send_response(calibrator.measure_value())
             print(f"{round(current_value2[1], 6)}...")
             counter +=1
-            if abs(current_value2[1] - current_value1[1]) <= 0.00001:
+            if abs(current_value2[1] - current_value1[1]) <= 0.00005:
                 break
         print(f"Установлено: {round(current_value2[1], 6)}")
         print(f"Запрос измерений...")
@@ -56,7 +56,7 @@ if device.ao_mode != "OFF" :
         for num_of_point in range(1, num_of_points+1):
             measured_value = calibrator.send_response(calibrator.measure_value())
             print(f"Точка №{num_of_point}: {measured_value[1]}")
-            save_data(i, measured_value[1])
+            writer.write_data({"Reference": i, "Output_Value": measured_value[1]})
 
     calibrator.disconnect()
     device.disconnect()
@@ -75,8 +75,8 @@ else:
             for num_of_point in range(1, num_of_points+1):
                 device.send()
                 device_resp = device.recieve()
-                print(f"Точка №{num_of_point}: {round(device.value_unpack_float(device_resp[1])[0], 6)}")
-                save_data(current_value[1], device.value_unpack_float(device_resp[1])[0])
+                print(f"Точка №{num_of_point}: {device.value_unpack_float(device_resp[1])}")
+                writer.write_data({**{"Calibrator":current_value[1]},**device.value_unpack_float(device_resp[1])})
 
         if not two_pass:
             break

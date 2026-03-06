@@ -89,12 +89,12 @@ class Device:
 
     @staticmethod
     def value_unpack_float(raw_values):
-        values = []
+        values = {}
         for i in range(0, len(raw_values), 4):
             bytes_value = raw_values[i:i + 4]
             byte_swap = bytes([bytes_value[1]] + [bytes_value[0]] + [bytes_value[3]] + [bytes_value[2]])
             unpack_value = unpack('<f', byte_swap)[0]
-            values.append(unpack_value)
+            values[f'Chanel_{len(values)+1}'] = unpack_value
         return values
 
 
