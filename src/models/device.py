@@ -7,7 +7,7 @@ class Device:
         self.protocol = kwargs.get("PROTOCOL")
 
         self.com = kwargs.get("RTU_COM")
-        self.baudrate = kwargs.get("RTU_BAUDRATE")
+        self.baudrate = int(kwargs.get("RTU_BAUDRATE"))
         self.rtu_timeout = kwargs.get("RTU_TIMEOUT")
         char_time = 11 / self.baudrate
         self.inter_char_timeout = char_time * 1.5
@@ -39,9 +39,11 @@ class Device:
             self.client.reset_input_buffer()
             self.client.reset_output_buffer()
         elif self.protocol == 'TCP':
-            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.client.settimeout(self.tcp_timeout)
-            self.client.connect((self.ip, self.port))
+            # self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # self.client.settimeout(self.tcp_timeout)
+            # self.client.connect((self.ip, self.port))
+            print('Имитация подключения...')
+            print(self.ip, self.port)
         elif self.protocol == 'USB':
             self.client = hid.device()
             self.client.open(int(self.vid, 16), int(self.pid, 16))
@@ -60,7 +62,9 @@ class Device:
             self.client.write(request)
         elif self.protocol == 'TCP':
             request = bytes([0, 1, 0, 0]) + len(request_data).to_bytes(2) + request_data
-            self.client.sendall(request)
+            # self.client.sendall(request)
+            print('Имитация отправки данных')
+            print(request.hex())
         elif self.protocol == 'USB':
             # _ = self.client.read(64, 100)
             no_header = request_data + self.calculate_crc(request_data)
@@ -73,7 +77,9 @@ class Device:
             response = self.client.read(69)     # TODO подогнать параметры приема
             raw_values = response[3:len(response)-2]
         elif self.protocol == 'TCP':
-            response = self.client.recv(1024)
+            # response = self.client.recv(1024)
+            # raw_values = response[9:]
+            response = bytes.fromhex('00 01 00 00 00 23 01 03 20 41 bc 00 00 42 37 33 33 42 ca 99 9a 42 82 66 66 42 f6 e6 66 44 29 9a 40 40 49 0f db 40 2d f8 93')
             raw_values = response[9:]
         elif self.protocol == 'USB':
             packet1 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
@@ -85,15 +91,16 @@ class Device:
 
     def disconnect(self):
         if self.protocol in ('RTU','TCP', 'USB'):
-            self.client.close()
+            # self.client.close()
+            print("Имитация отключения...")
 
     @staticmethod
     def value_unpack_float(raw_values):
         values = {}
         for i in range(0, len(raw_values), 4):
             bytes_value = raw_values[i:i + 4]
-            byte_swap = bytes([bytes_value[1]] + [bytes_value[0]] + [bytes_value[3]] + [bytes_value[2]])
-            unpack_value = unpack('<f', byte_swap)[0]
+            byte_swap = bytes_value # bytes([bytes_value[1]] + [bytes_value[0]] + [bytes_value[3]] + [bytes_value[2]])
+            unpack_value = unpack('>f', byte_swap)[0]
             values[f'Chanel_{len(values)+1}'] = unpack_value
         return values
 
