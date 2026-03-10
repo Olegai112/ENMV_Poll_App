@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+
 from src.services.load_settings import Settings
 from src.models.device import Device
 
@@ -10,12 +11,13 @@ class Connection():
 
     def __init__(self, master):
         self.master = master
+        ttk.Label(self.master, text=" Выберите протокол...", anchor="c").pack(fill="both", expand=True)
 
         self.protocol_buttons()
         self.config_frame = None
         self.add_status()
 
-    def add_config(self, chosed_protocol):
+    def connection_config(self, chosed_protocol):
         if  self.config_frame != None:
             self.config_frame.destroy()
         
@@ -34,8 +36,8 @@ class Connection():
             com_values = ["COM6", "COM7"]
             baudrate_values = ["19200", "115200"]
 
-            self.com_combobox = ttk.Combobox(self.config_frame, textvariable=com_values, values=com_values, justify="center")
-            self.baudrate_combobox = ttk.Combobox(self.config_frame, textvariable=baudrate_values, values=baudrate_values, justify="center")
+            self.com_combobox = ttk.Combobox(self.config_frame, textvariable=com_values, values=com_values, justify="center", state="readonly")
+            self.baudrate_combobox = ttk.Combobox(self.config_frame, textvariable=baudrate_values, values=baudrate_values, justify="center", state="readonly")
 
             com_label.grid(row=0, column=0, sticky="nsew")
             baudrate_label.grid(row=1, column=0, sticky="nsew")
@@ -75,6 +77,7 @@ class Connection():
         self.previous_chosed_protocol = None
 
         def config_frame_var(event):
+            self.connect_btn.config(state="enabled")
             self.chosed_protocol = event.widget
             if self.chosed_protocol == self.previous_chosed_protocol:
                 return
@@ -85,7 +88,7 @@ class Connection():
 
             self.previous_chosed_protocol = self.chosed_protocol
 
-            self.add_config(self.chosed_protocol)
+            self.connection_config(self.chosed_protocol)
             
         self.rtu_btn.bind('<ButtonPress-1>', config_frame_var)
         self.tcp_btn.bind('<ButtonPress-1>', config_frame_var)
@@ -96,6 +99,10 @@ class Connection():
         self.usb_btn.pack(side="left", fill="both", expand=True)
 
     def add_status(self):
+        self.status_frame = tk.Frame(self.master, bg="black")
+        self.status_frame.place(rely=3 / 4, relheight=1 / 4, relwidth=1)
+        self.status_label = ttk.Label(self.status_frame, text="Отключено", foreground="red", background="#FFCDD2", anchor="c")
+
         def connect():
             if self.chosed_protocol == self.rtu_btn:
                 Settings.push("device", "PROTOCOL", changed_setting = self.rtu_btn["text"])
@@ -112,20 +119,25 @@ class Connection():
 
             self.device = Device(**Settings.config["device"])
             self.device.connect()
-        
+
+            self.device.send("ping")
+            ping_responce = self.device.recieve()
+            if ping_responce[0] != b'':
+               self.status_label.config(text="Подключено", foreground="green", background="#90feb5")
+               self.connect_btn.config(state="disabled")
+               self.disconnect_btn.config(state="enabled")
+
+
         def disconnect():
-            if self.device != None:
-                self.device.disconnect()
-                self.device = None
+            self.device.disconnect()
+            self.status_label.config(text="Отключено", foreground="red", background="#FFCDD2")
+            self.device = None
+            self.connect_btn.config(state="enabled")
+            self.disconnect_btn.config(state="disabled")
 
 
-
-        self.status_frame = tk.Frame(self.master, bg="black")
-        self.status_frame.place(rely=3/4, relheight=1/4, relwidth=1)
-
-        self.status_label = ttk.Label(self.status_frame, text="Отключено", foreground="red", background="#FFCDD2", anchor="c")
-        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=connect)
-        self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=disconnect)
+        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=connect, state="disabled")
+        self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=disconnect, state="disabled")
 
         self.status_label.pack(side="left", fill="both", expand=True)
         self.disconnect_btn.pack(side="left", fill="both", expand=True)

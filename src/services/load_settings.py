@@ -22,8 +22,9 @@ class Settings:
     def push(cls, *setting_name, changed_setting):
         if len(setting_name) > 1:
             cls.config[setting_name[0]][setting_name[1]] = changed_setting
+            print(setting_name)
         else:
-             cls.config[setting_name] = changed_setting
+            cls.config[setting_name[0]] = changed_setting
         cls.save()
 
 config = Settings()

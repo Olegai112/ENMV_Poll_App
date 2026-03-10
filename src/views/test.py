@@ -103,7 +103,3 @@ class MainWindow():
         console_frame.grid(row=2, column=1, sticky='nsew', padx=5, pady=5)
         
         self.root.mainloop()
-
-
-if __name__ == "__main__":
-    app = MainWindow()

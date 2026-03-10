@@ -3,11 +3,11 @@ from struct import pack, unpack
 
 
 class Calibrator:
-    def __init__(self, parameter):
-        self.parameter = parameter  # kwargs.get("PARAMETER")
+    def __init__(self, parameter=None):
+        self.parameter = parameter
 
     def connect(self):
-        self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3)
+        self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
 
     def send_response(self, command_data):
         self.client.reset_input_buffer()
@@ -22,7 +22,6 @@ class Calibrator:
 
     def disconnect(self):
         self.client.close()
-
 
     def set_value(self, value = 0):
         command_data = None
