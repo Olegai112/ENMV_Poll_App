@@ -7,7 +7,7 @@ class Calibrator:
         self.parameter = parameter
 
     def connect(self):
-        self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
+        self.client = Serial(port="COM1", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
 
     def send_response(self, command_data):
         self.client.reset_input_buffer()
