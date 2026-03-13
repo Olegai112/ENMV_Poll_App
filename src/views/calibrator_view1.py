@@ -28,7 +28,7 @@ class CalibView():
 
         self.calib_status()
         self.calib_settings_frame = None
-        self.calib_set_thread = threading.Thread(target=self.calib_read, daemon=True)
+        
 
     def calib_status(self):
         self.calib_status_frame = tk.Frame(self.master)
