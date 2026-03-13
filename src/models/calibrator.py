@@ -3,11 +3,15 @@ from struct import pack, unpack
 
 
 class Calibrator:
+    client = None
     def __init__(self, parameter=None):
         self.parameter = parameter
 
     def connect(self):
-        self.client = Serial(port="COM1", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
+        if self.client != None:
+            self.client.open()
+        else:
+            self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
 
     def send_response(self, command_data):
         self.client.reset_input_buffer()
@@ -16,9 +20,13 @@ class Calibrator:
         for i in range(len(command_data)):
             self.client.write(bytes([command_data[i]]))
             response.extend(self.client.read(1))
-        checksum = sum(response[-2:-6:-1]) % 256 == response[-1]
-        float_value = unpack('>f', bytes(response)[-2:-6:-1])[0]
-        return bytes(response), float_value
+        if len(command_data) >= 6:
+            checksum = sum(response[-2:-6:-1]) % 256 == response[-1]
+            float_value = unpack('>f', bytes(response)[-2:-6:-1])[0]
+            return bytes(response), float_value, checksum
+        # else:
+        #     return bytes(response)
+
 
     def disconnect(self):
         self.client.close()

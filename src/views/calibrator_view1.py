@@ -9,7 +9,7 @@ from src.models.calibrator import Calibrator
 from src.services.load_settings import Settings
 
 
-class CalibView():
+class CalibView1():
     calib = None
 
     def calib_read(self):
@@ -28,7 +28,7 @@ class CalibView():
 
         self.calib_status()
         self.calib_settings_frame = None
-        
+
 
     def calib_status(self):
         self.calib_status_frame = tk.Frame(self.master)
