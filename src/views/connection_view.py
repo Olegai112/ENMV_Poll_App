@@ -6,16 +6,19 @@ from src.models.device import Device
 
 
 class Connection():
-    chosed_protocol = None
-    device = None
-
     def __init__(self, master):
+        self.chosed_protocol = None
+        self.device = None
+
         self.master = master
         ttk.Label(self.master, text=" Выберите протокол...", anchor="c").pack(fill="both", expand=True)
 
         self.protocol_buttons()
         self.config_frame = None
         self.add_status()
+
+    def get_device(self):
+        return self.device
 
     def connection_config(self, chosed_protocol):
         if  self.config_frame != None:
@@ -48,7 +51,9 @@ class Connection():
             ip_label = ttk.Label(self.config_frame, text="IP адрес:", anchor="c")
             port_label = ttk.Label(self.config_frame, text="Порт:", anchor="c")
             self.ip_entry = ttk.Entry(self.config_frame, justify="center")
+            self.ip_entry.insert(0, "172.17.1.128")
             self.port_entry = ttk.Entry(self.config_frame, justify="center")
+            self.port_entry.insert(0, 502)
 
             ip_label.grid(row=0, column=0, sticky="nsew")
             port_label.grid(row=1, column=0, sticky="nsew")
@@ -111,7 +116,7 @@ class Connection():
             elif self.chosed_protocol == self.tcp_btn:
                 Settings.push("device", "PROTOCOL", changed_setting = self.tcp_btn["text"])
                 Settings.push("device", "TCP_IP", changed_setting = self.ip_entry.get())
-                Settings.push("device", "TCP_PORT", changed_setting = self.port_entry.get())
+                Settings.push("device", "TCP_PORT", changed_setting = int(self.port_entry.get()))
             elif self.chosed_protocol == self.usb_btn:
                 Settings.push("device", "PROTOCOL", changed_setting = self.usb_btn["text"])
                 Settings.push("device", "VID", changed_setting = self.vid_entry.get())
@@ -122,11 +127,11 @@ class Connection():
 
             self.device.send("ping")
             ping_responce = self.device.recieve()
+            print(ping_responce[0])
             if ping_responce[0] != b'':
                self.status_label.config(text="Подключено", foreground="green", background="#90feb5")
                self.connect_btn.config(state="disabled")
                self.disconnect_btn.config(state="enabled")
-
 
         def disconnect():
             self.device.disconnect()

@@ -10,6 +10,7 @@ class Settings:
         with open(self.path, 'r', encoding='utf-8') as f:
             Settings.config = load(f)
 
+    @classmethod
     def get(self, setting_name):
         return Settings.config.get(setting_name)
     
@@ -22,7 +23,6 @@ class Settings:
     def push(cls, *setting_name, changed_setting):
         if len(setting_name) > 1:
             cls.config[setting_name[0]][setting_name[1]] = changed_setting
-            print(setting_name)
         else:
             cls.config[setting_name[0]] = changed_setting
         cls.save()

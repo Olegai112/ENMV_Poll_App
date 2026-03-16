@@ -1,5 +1,4 @@
 import tkinter as tk
-from http.client import responses
 from tkinter import ttk
 
 from time import sleep
@@ -46,8 +45,20 @@ class CalibView():
                 except Exception as e:
                     print(e)
                     sleep(1)
+
+            # while True:
+            #     try:
+            #         resp = self.calib.send_response([166] * 8)[0][0]
+            #     except Exception as e:
+            #         print(e)
+            #         sleep(1)
+            #     if resp == 166:
+            #         break
+
             while not self.calib.send_response([166]*8)[0][0] == 166:
+                sleep(1)
                 pass
+
         else:
             try:
                 self.calib.disconnect()
@@ -197,10 +208,21 @@ class CalibView():
 
     def calib_workin(self):
         self.responce = ""
+        calib_flag = True
         try:
+            counter = 0
             while self.calib.client.is_open:
                 if self.chosen_mode == "Измерение":
-                    command = self.calib.measure_value()
+                    counter += 1
+                    if counter % 10 == 0:
+                        calib_flag = True
+                    print(counter)
+                    print(calib_flag)
+                    if calib_flag:
+                        command = self.calib.measure_value()
+                        calib_flag = False
+                    else:
+                        command = self.calib.measure_value()
                     self.master.after(0, self.measure_value_label.config(text = self.responce))
                 elif self.chosen_mode == "Воспроизведение":
                     if self.to_set_value_btn_flag:

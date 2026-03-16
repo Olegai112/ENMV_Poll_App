@@ -22,28 +22,29 @@ class Device:
         self.pid = kwargs.get("PID")
 
         self.manually_send = kwargs.get("MANUALLY_SEND")
-        self.slave_id = kwargs.get("SLAVE_ID").to_bytes(1)
-        self.function = bytes.fromhex(kwargs.get("FUNCTION"))
-        self.start_adress = kwargs.get("START_ADRESS").to_bytes(2)
-        self.reg_count = kwargs.get("REG_COUNT").to_bytes(2)
+        self.slave_id = kwargs.get("SLAVE_ID")
+        self.function = kwargs.get("FUNCTION")
+        self.start_adress = kwargs.get("START_ADRESS")
+        self.reg_count = kwargs.get("REG_COUNT")
 
         self.ao_mode = kwargs.get("AO_MODE")
-        self.ao_range = kwargs.get("AO_RANGE").to_bytes(1)
-        self.ao_coefficients = kwargs.get("AO_COEFFICIENTS").to_bytes(1)
-        self.ao_esx_id = kwargs.get("AO_ESX_ID").to_bytes(1)
+        self.ao_range = kwargs.get("AO_RANGE")
+        self.ao_coefficients = kwargs.get("AO_COEFFICIENTS")
+        self.ao_esx_id = kwargs.get("AO_ESX_ID")
 
     def connect(self):
         if self.protocol == 'RTU':
             self.client = Serial(self.com, self.baudrate, timeout=self.rtu_timeout, inter_byte_timeout=self.inter_char_timeout)
             self.client.reset_input_buffer()
             self.client.reset_output_buffer()
+            print(self.client)
         elif self.protocol == 'TCP':
-            # self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # self.client.settimeout(self.tcp_timeout)
-            # self.client.connect((self.ip, self.port))
-            self.client = "TCP client"
-            print('Имитация подключения...')
-            print(self.ip, self.port)
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client.settimeout(self.tcp_timeout)
+            self.client.connect((self.ip, self.port))
+            # self.client = "TCP client"
+            # print('Имитация подключения...')
+            # print(self.ip, self.port)
         elif self.protocol == 'USB':
             self.client = hid.device()
             self.client.open(int(self.vid, 16), int(self.pid, 16))
@@ -56,20 +57,20 @@ class Device:
 
         elif not self.manually_send:
             if self.ao_mode == 'OFF':
-                request_data = self.slave_id + self.function + self.start_adress + self.reg_count
+                request_data = int(self.slave_id).to_bytes(1) + bytes.fromhex(self.function) + int(self.start_adress).to_bytes(2) + int(self.reg_count).to_bytes(2)
             elif self.ao_mode == 'ENMV':
-                request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range + self.ao_coefficients + pack('<f', request_data)
+                request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range.to_bytes(1) + self.ao_coefficients.to_bytes(1) + pack('<f', request_data)
             elif self.ao_mode == 'ESX':
-                request_data = self.ao_esx_id + b'\x03\x04' + pack('>f', request_data) # !возможно ошибка с big-endian!
+                request_data = self.ao_esx_id.to_bytes(1) + b'\x03\x04' + pack('>f', request_data) # !возможно ошибка с big-endian!
 
         if self.protocol == 'RTU':
             request = request_data + self.calculate_crc(request_data)
             self.client.write(request)
         elif self.protocol == 'TCP':
             request = bytes([0, 1, 0, 0]) + len(request_data).to_bytes(2) + request_data
-            # self.client.sendall(request)
-            print('Имитация отправки данных')
-            print(request.hex())
+            self.client.sendall(request)
+            # print('Имитация отправки данных')
+            # print(request.hex())
         elif self.protocol == 'USB':
             # _ = self.client.read(64, 100)
             no_header = request_data + self.calculate_crc(request_data)
@@ -84,11 +85,11 @@ class Device:
             if len(response) >= 7:
                 raw_values = response[3:len(response)-2]
         elif self.protocol == 'TCP':
-            # response = self.client.recv(1024)
-            # if len(response) >= 7:
-            #     raw_values = response[9:]
-            response = bytes.fromhex('00 01 00 00 00 23 01 03 20 41 bc 00 00 42 37 33 33 42 ca 99 9a 42 82 66 66 42 f6 e6 66 44 29 9a 40 40 49 0f db 40 2d f8 93')
-            raw_values = response[9:]
+            response = self.client.recv(1024)
+            if len(response) >= 7:
+                raw_values = response[9:]
+            # response = bytes.fromhex('00 01 00 00 00 23 01 03 20 41 bc 00 00 42 37 33 33 42 ca 99 9a 42 82 66 66 42 f6 e6 66 44 29 9a 40 40 49 0f db 40 2d f8 93')
+            # raw_values = response[9:]
         elif self.protocol == 'USB':
             packet1 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
             packet2 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
@@ -102,7 +103,8 @@ class Device:
         if self.protocol in ('RTU', 'USB'):
             self.client.close()
         else:
-            print("Имитация отключения...")
+            self.client.close()
+            # print("Имитация отключения...")
 
     @staticmethod
     def value_unpack_float(raw_values):

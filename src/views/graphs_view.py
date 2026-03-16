@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 import numpy as np
 
 
-class GraphWidget:
+class Graphs:
     def __init__(self, parent):
         self.parent = parent
 
@@ -66,19 +66,3 @@ class GraphWidget:
         self.ax.set_title(title)
         self.ax.grid(True)
         self.canvas.draw()
-
-
-# Использование в главном окне
-class MainWindow:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.geometry("800x600")
-
-        # Создаем фрейм для графика
-        self.graph_frame = ttk.LabelFrame(self.root, text="График")
-        self.graph_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Добавляем виджет графика
-        self.graph = GraphWidget(self.graph_frame)
-
-        self.root.mainloop()
