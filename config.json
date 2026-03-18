@@ -1,6 +1,6 @@
 {
     "device": {
-        "PROTOCOL": "RTU",
+        "PROTOCOL": "TCP",
         "RTU_COM": "COM7",
         "RTU_BAUDRATE": "115200",
         "RTU_TIMEOUT": 0.1,
@@ -9,11 +9,11 @@
         "TCP_TIMEOUT": 1,
         "VID": "123",
         "PID": "123",
-        "MANUALLY_SEND": true,
+        "MANUALLY_SEND": false,
         "SLAVE_ID": "1",
         "FUNCTION": "03",
         "START_ADRESS": "0",
-        "REG_COUNT": "2",
+        "REG_COUNT": "48",
         "AO_MODE": "OFF",
         "AO_RANGE": 1,
         "AO_COEFFICIENTS": 0,

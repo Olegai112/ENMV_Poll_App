@@ -9,8 +9,14 @@ from src.models.calibrator import Calibrator
 class CalibView():
     calib = Calibrator()
     def __init__(self, master):
+
         self.master = master
         self.add_calib_status_frame()
+
+        ttk.Label(self.master, text="Подключите калибратор...", anchor="center").place(rely=1/5, relwidth=1, relheight=4/5)
+
+    # def get_calib(self):
+    #     return self.calib
 
     def add_calib_status_frame(self):
         self.calib_status_frame = tk.Frame(self.master)
@@ -31,13 +37,18 @@ class CalibView():
         # self.connection_status = True
 
 
-    def connect_to_calib_thread(self):
-        self.connect_to_calib_tread = threading.Thread(target=self.connect_to_calib, daemon=True)
+    def connect_to_calib_thread(self, precision_research_flag = None, callback = None):
+        self.connect_to_calib_tread = threading.Thread(target=lambda: self.connect_to_calib(callback = callback), daemon=True)
         # self.connection_check_thread = threading.Thread(target=self.connection_check, daemon=True)
+        if precision_research_flag != None:
+            self.calib_status = True
+
+        else:
+            self.calib_status = self.calib_status_chbtn_var.get()
         self.connect_to_calib_tread.start()
 
-    def connect_to_calib(self):
-        if self.calib_status_chbtn_var.get():
+    def connect_to_calib(self, callback = None):
+        if self.calib_status:
             while True:
                 try:
                     self.calib.connect()
@@ -58,7 +69,6 @@ class CalibView():
             while not self.calib.send_response([166]*8)[0][0] == 166:
                 sleep(1)
                 pass
-
         else:
             try:
                 self.calib.disconnect()
@@ -69,10 +79,13 @@ class CalibView():
         if self.calib.client.is_open:
             self.master.after(0, self.calib_status_label.config(text="Подключен", foreground="green", background="#90feb5", anchor="c"))
             self.add_calib_work_frame()
+            callback(self.calib)
             # self.connection_check_thread.start()
         else:
             self.master.after(0, self.calib_status_label.config(text="Отключен", foreground="red", background="#FFCDD2", anchor="c"))
-            self.calib_work_frame.destroy()
+            if hasattr(self, "calib_work_frame"):
+                self.calib_work_frame.destroy()
+
 
     # def connection_check(self):
     #     while self.calib.client.is_open:

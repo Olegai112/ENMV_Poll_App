@@ -61,21 +61,29 @@ class DevicePoll():
         self.send_frame = tk.Frame(self.master) # третий
         self.send_frame.pack(fill="x", expand=True)
 
-        self.delay_chbtn = ttk.Checkbutton(self.send_frame)
-        self.delay_label = ttk.Label(self.send_frame, text="Delay")
-        self.delay_entry = ttk.Entry(self.send_frame, width=4)
-        self.points_chbtn = ttk.Checkbutton(self.send_frame)
-        self.points_label = ttk.Label(self.send_frame, text="Points")
+        self.delay_chbtn_var = tk.BooleanVar(value=False)
+        self.delay_entry = ttk.Entry(self.send_frame, width=4, state="disabled")
+        self.delay_chbtn = ttk.Checkbutton(self.send_frame, text="Delay", variable=self.delay_chbtn_var, command= lambda:self.checkbuttons_entry_state(self.delay_chbtn_var.get(), self.delay_entry))
+
+        self.points_chbtn_var = tk.BooleanVar(value=False)
         self.points_entry = ttk.Entry(self.send_frame, width=4)
+        self.points_entry.insert(0, "1")
+        self.points_entry.config(state="disabled")
+        self.points_chbtn = ttk.Checkbutton(self.send_frame, text="Points", variable=self.points_chbtn_var, command= lambda:self.checkbuttons_entry_state(self.points_chbtn_var.get(), self.points_entry))
+
+        self.float_chbtn_var = tk.BooleanVar(value=False)
+        self.float_chbtn = ttk.Checkbutton(self.send_frame, text="float", variable=self.float_chbtn_var)
+
         self.send_btn = ttk.Button(self.send_frame, command = self.modbus_request_mode, text="--->")
 
-        self.delay_chbtn.pack(side="left")
-        self.delay_label.pack(side="left")
-        self.delay_entry.pack(side="left")
-        self.points_chbtn.pack(side="left")
-        self.points_label.pack(side="left")
-        self.points_entry.pack(side="left")
-        self.send_btn.pack(side="right")
+        self.delay_chbtn.pack(side="left", expand=True)
+        self.delay_entry.pack(side="left", expand=True)
+        self.points_chbtn.pack(side="left", expand=True)
+        self.points_entry.pack(side="left", expand=True)
+
+        self.float_chbtn.pack(side="left", expand=True)
+
+        self.send_btn.pack(side="right", expand=True)
 
         self.radiobuttons()
 
@@ -86,15 +94,27 @@ class DevicePoll():
         Settings.push("device", "MANUALLY_SEND", changed_setting=selected)
         self.device.manually_send = Settings.get("device")["MANUALLY_SEND"]
 
-        if selected:
-            self.device.send(bytes.fromhex(self.command_entry.get()))
-        else:
-            self.send_modbus_request()
+        points = self.points_entry.get()
+        counter = 1
+        if not self.points_chbtn_var.get():
+            points = 1
+        while counter <= int(points) :
+            if selected:
+                req = self.device.send(bytes.fromhex(self.command_entry.get()))
+            else:
+                req = self.send_modbus_request()
+            print(f"={counter}=\nЗапрос: {req.hex()}")
+            counter += 1
 
-        # resp = self.device.value_unpack_float(self.device.recieve()[1])
-        # for i in resp.keys():
-        #     print(i, resp[i])
-        print(self.device.recieve()[1].hex())
+            resp = self.device.recieve()
+            print(f"Ответ: {resp[0].hex()}\n")
+            if self.float_chbtn_var.get():
+                values = self.device.value_unpack_float(resp[1])
+                print(f"Каналы:")
+                for i in values.keys():
+                    print(i, values[i])
+                print()
+
 
 
     def send_modbus_request(self):
@@ -108,7 +128,8 @@ class DevicePoll():
         self.device.start_adress = self.start_addr_entry.get()
         self.device.reg_count = self.reg_count_entry.get()
 
-        self.device.send()
+        req = self.device.send()
+        return req
 
     def radiobuttons(self):
         if self.selected_send_mode.get():
@@ -122,6 +143,11 @@ class DevicePoll():
                 if not widget == self.command_const_rbtn:
                     widget.config(state="enabled")
 
+    def checkbuttons_entry_state(self, bool_var, entry):
+        if bool_var:
+            entry.config(state = "enabled")
+        else:
+            entry.config(state="disabled")
 
 
 

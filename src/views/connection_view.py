@@ -108,44 +108,43 @@ class Connection():
         self.status_frame.place(rely=3 / 4, relheight=1 / 4, relwidth=1)
         self.status_label = ttk.Label(self.status_frame, text="Отключено", foreground="red", background="#FFCDD2", anchor="c")
 
-        def connect():
-            if self.chosed_protocol == self.rtu_btn:
-                Settings.push("device", "PROTOCOL", changed_setting = self.rtu_btn["text"])
-                Settings.push("device", "RTU_COM", changed_setting = self.com_combobox.get())
-                Settings.push("device", "RTU_BAUDRATE", changed_setting = self.baudrate_combobox.get())
-            elif self.chosed_protocol == self.tcp_btn:
-                Settings.push("device", "PROTOCOL", changed_setting = self.tcp_btn["text"])
-                Settings.push("device", "TCP_IP", changed_setting = self.ip_entry.get())
-                Settings.push("device", "TCP_PORT", changed_setting = int(self.port_entry.get()))
-            elif self.chosed_protocol == self.usb_btn:
-                Settings.push("device", "PROTOCOL", changed_setting = self.usb_btn["text"])
-                Settings.push("device", "VID", changed_setting = self.vid_entry.get())
-                Settings.push("device", "PID", changed_setting = self.pid_entry.get())
-
-            self.device = Device(**Settings.config["device"])
-            self.device.connect()
-
-            self.device.send("ping")
-            ping_responce = self.device.recieve()
-            print(ping_responce[0])
-            if ping_responce[0] != b'':
-               self.status_label.config(text="Подключено", foreground="green", background="#90feb5")
-               self.connect_btn.config(state="disabled")
-               self.disconnect_btn.config(state="enabled")
-
-        def disconnect():
-            self.device.disconnect()
-            self.status_label.config(text="Отключено", foreground="red", background="#FFCDD2")
-            self.device = None
-            self.connect_btn.config(state="enabled")
-            self.disconnect_btn.config(state="disabled")
-
-
-        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=connect, state="disabled")
-        self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=disconnect, state="disabled")
+        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=self.connect, state="disabled")
+        self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=self.disconnect, state="disabled")
 
         self.status_label.pack(side="left", fill="both", expand=True)
         self.disconnect_btn.pack(side="left", fill="both", expand=True)
         self.connect_btn.pack(side="left", fill="both", expand=True)
 
+    def connect(self):
+        if self.chosed_protocol == self.rtu_btn:
+            Settings.push("device", "PROTOCOL", changed_setting = self.rtu_btn["text"])
+            Settings.push("device", "RTU_COM", changed_setting = self.com_combobox.get())
+            Settings.push("device", "RTU_BAUDRATE", changed_setting = self.baudrate_combobox.get())
+        elif self.chosed_protocol == self.tcp_btn:
+            Settings.push("device", "PROTOCOL", changed_setting = self.tcp_btn["text"])
+            Settings.push("device", "TCP_IP", changed_setting = self.ip_entry.get())
+            Settings.push("device", "TCP_PORT", changed_setting = int(self.port_entry.get()))
+        elif self.chosed_protocol == self.usb_btn:
+            Settings.push("device", "PROTOCOL", changed_setting = self.usb_btn["text"])
+            Settings.push("device", "VID", changed_setting = self.vid_entry.get())
+            Settings.push("device", "PID", changed_setting = self.pid_entry.get())
+
+        self.device = Device(**Settings.config["device"])
+        self.device.connect()
+
+        self.device.send("ping")
+        ping_responce = self.device.recieve()
+        if ping_responce[0] != b'':
+           self.status_label.config(text="Подключено", foreground="green", background="#90feb5")
+           self.connect_btn.config(state="disabled")
+           self.disconnect_btn.config(state="enabled")
+           print(f"=Устройство (такое-то) подключено.\nПротокол: {self.device.protocol}\n")
+
+    def disconnect(self):
+        self.device.disconnect()
+        self.status_label.config(text="Отключено", foreground="red", background="#FFCDD2")
+        self.device = None
+        self.connect_btn.config(state="enabled")
+        self.disconnect_btn.config(state="disabled")
+        print(f"=Устройство (такое-то) отключено.\n")
 

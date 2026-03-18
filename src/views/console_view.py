@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, ttk
 import sys
 
 
@@ -9,6 +9,8 @@ class Console:
 
         self.text_area = scrolledtext.ScrolledText(self.master, wrap=tk.WORD, font=('Courier', 11), bg='black', fg='white', state='normal')
         self.text_area.pack(expand=True, fill="both")
+        self.clear_btn = ttk.Button(self.text_area, text="Очистить",cursor = "arrow" , command=self.clear)
+        self.clear_btn.place(relx=7/8)
 
         # sys.stdout = self
 

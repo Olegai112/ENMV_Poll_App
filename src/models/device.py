@@ -37,7 +37,6 @@ class Device:
             self.client = Serial(self.com, self.baudrate, timeout=self.rtu_timeout, inter_byte_timeout=self.inter_char_timeout)
             self.client.reset_input_buffer()
             self.client.reset_output_buffer()
-            print(self.client)
         elif self.protocol == 'TCP':
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client.settimeout(self.tcp_timeout)
@@ -77,11 +76,12 @@ class Device:
             request = bytes([1, 0, len(no_header), 0]) + no_header
             hid_data = request.ljust(64, b'\x00')
             self.client.write(hid_data)
+        return request
 
     def recieve(self):
         raw_values = None
         if self.protocol == 'RTU':
-            response = self.client.read(69)     # TODO подогнать параметры приема
+            response = self.client.read(1024)     # TODO подогнать параметры приема
             if len(response) >= 7:
                 raw_values = response[3:len(response)-2]
         elif self.protocol == 'TCP':
@@ -91,8 +91,8 @@ class Device:
             # response = bytes.fromhex('00 01 00 00 00 23 01 03 20 41 bc 00 00 42 37 33 33 42 ca 99 9a 42 82 66 66 42 f6 e6 66 44 29 9a 40 40 49 0f db 40 2d f8 93')
             # raw_values = response[9:]
         elif self.protocol == 'USB':
-            packet1 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
-            packet2 = bytes(self.client.read(64, 1000)).rstrip(b'\x00')
+            packet1 = bytes(self.client.read(64, 1024)).rstrip(b'\x00')
+            packet2 = bytes(self.client.read(64, 1024)).rstrip(b'\x00')
             response = packet1 + packet2
             if len(response) >= 7:
                 raw_values = packet1[7:]+packet2[2:]

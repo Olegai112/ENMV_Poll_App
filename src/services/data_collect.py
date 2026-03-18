@@ -28,7 +28,6 @@ class DataCollector:
                 writer.writerow({**{"Time":datetime.now().strftime("%H:%M:%S")}, **data})
 
 writer = DataCollector()
-print(writer.filename)
 
 
 
