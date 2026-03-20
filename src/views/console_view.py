@@ -12,7 +12,7 @@ class Console:
         self.clear_btn = ttk.Button(self.text_area, text="Очистить",cursor = "arrow" , command=self.clear)
         self.clear_btn.place(relx=7/8)
 
-        # sys.stdout = self
+        sys.stdout = self
 
     def write(self, text):
         self.text_area.insert(tk.END, text)

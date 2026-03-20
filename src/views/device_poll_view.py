@@ -115,8 +115,6 @@ class DevicePoll():
                     print(i, values[i])
                 print()
 
-
-
     def send_modbus_request(self):
         Settings.push("device", "SLAVE_ID", changed_setting=self.slave_id_entry.get())
         Settings.push("device", "FUNCTION", changed_setting=self.fuction_entry.get())

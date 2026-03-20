@@ -24,7 +24,7 @@ class Connection():
         if  self.config_frame != None:
             self.config_frame.destroy()
         
-        self.config_frame = tk.Frame(self.master, bg="green")
+        self.config_frame = tk.Frame(self.master)
         self.config_frame.place(rely=1/4, relheight=2/4, relwidth=1)
         
         self.config_frame.columnconfigure(index=0, weight=1, uniform='col')
@@ -39,40 +39,44 @@ class Connection():
             com_values = ["COM6", "COM7"]
             baudrate_values = ["19200", "115200"]
 
-            self.com_combobox = ttk.Combobox(self.config_frame, textvariable=com_values, values=com_values, justify="center", state="readonly")
-            self.baudrate_combobox = ttk.Combobox(self.config_frame, textvariable=baudrate_values, values=baudrate_values, justify="center", state="readonly")
+            self.com_combobox = ttk.Combobox(self.config_frame, values=com_values, justify="center", state="readonly")
+            self.com_combobox.set(Settings.get("device")["RTU_COM"])
+            self.baudrate_combobox = ttk.Combobox(self.config_frame, values=baudrate_values, justify="center", state="readonly")
+            self.baudrate_combobox.set(Settings.get("device")["RTU_BAUDRATE"])
 
-            com_label.grid(row=0, column=0, sticky="nsew")
-            baudrate_label.grid(row=1, column=0, sticky="nsew")
-            self.com_combobox.grid(row=0, column=1, sticky="nsew")
-            self.baudrate_combobox.grid(row=1, column=1, sticky="nsew")
+            com_label.grid(row=0, column=0, sticky="ew")
+            baudrate_label.grid(row=1, column=0, sticky="ew")
+            self.com_combobox.grid(row=0, column=1, sticky="ew")
+            self.baudrate_combobox.grid(row=1, column=1, sticky="ew")
 
         elif self.chosed_protocol == self.tcp_btn:
             ip_label = ttk.Label(self.config_frame, text="IP адрес:", anchor="c")
             port_label = ttk.Label(self.config_frame, text="Порт:", anchor="c")
             self.ip_entry = ttk.Entry(self.config_frame, justify="center")
-            self.ip_entry.insert(0, "172.17.1.128")
+            self.ip_entry.insert(0, Settings.get("device")["TCP_IP"])
             self.port_entry = ttk.Entry(self.config_frame, justify="center")
-            self.port_entry.insert(0, 502)
+            self.port_entry.insert(0, Settings.get("device")["TCP_PORT"])
 
-            ip_label.grid(row=0, column=0, sticky="nsew")
-            port_label.grid(row=1, column=0, sticky="nsew")
-            self.ip_entry.grid(row=0, column=1, sticky="nsew")
-            self.port_entry.grid(row=1, column=1, sticky="nsew")
+            ip_label.grid(row=0, column=0, sticky="ew")
+            port_label.grid(row=1, column=0, sticky="ew")
+            self.ip_entry.grid(row=0, column=1, sticky="ew")
+            self.port_entry.grid(row=1, column=1, sticky="ew")
 
         elif self.chosed_protocol == self.usb_btn:
             vid_label = ttk.Label(self.config_frame, text="VID:", anchor="c")
             pid_label = ttk.Label(self.config_frame, text="PID:", anchor="c")
             self.vid_entry = ttk.Entry(self.config_frame, justify="center")
+            self.vid_entry.insert(0, Settings.get("device")["VID"])
             self.pid_entry = ttk.Entry(self.config_frame, justify="center")
+            self.pid_entry.insert(0, Settings.get("device")["PID"])
 
-            vid_label.grid(row=0, column=0, sticky="nsew")
-            pid_label.grid(row=1, column=0, sticky="nsew")
-            self.vid_entry.grid(row=0, column=1, sticky="nsew")
-            self.pid_entry.grid(row=1, column=1, sticky="nsew")
+            vid_label.grid(row=0, column=0, sticky="ew")
+            pid_label.grid(row=1, column=0, sticky="ew")
+            self.vid_entry.grid(row=0, column=1, sticky="ew")
+            self.pid_entry.grid(row=1, column=1, sticky="ew")
 
     def protocol_buttons(self):
-        self.protocol_frame = tk.Frame(self.master, bg="yellow")
+        self.protocol_frame = tk.Frame(self.master)
         self.protocol_frame.place(relheight=1/4, relwidth=1)
 
         self.rtu_btn = ttk.Button(self.protocol_frame, text="RTU")
@@ -80,40 +84,26 @@ class Connection():
         self.usb_btn = ttk.Button(self.protocol_frame, text="USB")
 
         self.previous_chosed_protocol = None
-
-        def config_frame_var(event):
-            self.connect_btn.config(state="enabled")
-            self.chosed_protocol = event.widget
-            if self.chosed_protocol == self.previous_chosed_protocol:
-                return
-            self.chosed_protocol["state"] = "disabled"
-
-            if self.previous_chosed_protocol != None:
-                self.previous_chosed_protocol["state"] = "enabled"
-
-            self.previous_chosed_protocol = self.chosed_protocol
-
-            self.connection_config(self.chosed_protocol)
             
-        self.rtu_btn.bind('<ButtonPress-1>', config_frame_var)
-        self.tcp_btn.bind('<ButtonPress-1>', config_frame_var)
-        self.usb_btn.bind('<ButtonPress-1>', config_frame_var)
+        self.rtu_btn.bind('<ButtonPress-1>', self.config_frame_var)
+        self.tcp_btn.bind('<ButtonPress-1>', self.config_frame_var)
+        self.usb_btn.bind('<ButtonPress-1>', self.config_frame_var)
 
-        self.rtu_btn.pack(side="left", fill="both", expand=True)
-        self.tcp_btn.pack(side="left", fill="both", expand=True)
-        self.usb_btn.pack(side="left", fill="both", expand=True)
+        self.rtu_btn.pack(side="left", fill="x", expand=True)
+        self.tcp_btn.pack(side="left", fill="x", expand=True)
+        self.usb_btn.pack(side="left", fill="x", expand=True)
 
     def add_status(self):
-        self.status_frame = tk.Frame(self.master, bg="black")
+        self.status_frame = tk.Frame(self.master)
         self.status_frame.place(rely=3 / 4, relheight=1 / 4, relwidth=1)
         self.status_label = ttk.Label(self.status_frame, text="Отключено", foreground="red", background="#FFCDD2", anchor="c")
 
         self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=self.connect, state="disabled")
         self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=self.disconnect, state="disabled")
 
-        self.status_label.pack(side="left", fill="both", expand=True)
-        self.disconnect_btn.pack(side="left", fill="both", expand=True)
-        self.connect_btn.pack(side="left", fill="both", expand=True)
+        self.status_label.pack(side="left", fill="x", expand=True)
+        self.disconnect_btn.pack(side="left", fill="x", expand=True)
+        self.connect_btn.pack(side="left", fill="x", expand=True)
 
     def connect(self):
         if self.chosed_protocol == self.rtu_btn:
@@ -147,4 +137,27 @@ class Connection():
         self.connect_btn.config(state="enabled")
         self.disconnect_btn.config(state="disabled")
         print(f"=Устройство (такое-то) отключено.\n")
+
+    def config_frame_var(self, event=None):
+        self.connect_btn.config(state="enabled")
+        if event != None:
+            self.chosed_protocol = event.widget
+        else:
+            protocol = Settings.get("device")["PROTOCOL"]
+            if protocol == "RTU":
+                self.chosed_protocol = self.rtu_btn
+            elif protocol == "TCP":
+                self.chosed_protocol = self.tcp_btn
+            elif protocol == "USB":
+                self.chosed_protocol = self.usb_btn
+        if self.chosed_protocol == self.previous_chosed_protocol:
+            return
+        self.chosed_protocol["state"] = "disabled"
+
+        if self.previous_chosed_protocol != None:
+            self.previous_chosed_protocol["state"] = "enabled"
+
+        self.previous_chosed_protocol = self.chosed_protocol
+
+        self.connection_config(self.chosed_protocol)
 

@@ -8,10 +8,7 @@ class Calibrator:
         self.parameter = parameter
 
     def connect(self):
-        if self.client != None:
-            self.client.open()
-        else:
-            self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
+        self.client = Serial(port="COM3", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3, write_timeout=3)
 
     def send_response(self, command_data):
         self.client.reset_input_buffer()
@@ -27,7 +24,6 @@ class Calibrator:
         # else:
         #     return bytes(response)
 
-
     def disconnect(self):
         self.client.close()
 
@@ -40,6 +36,7 @@ class Calibrator:
             command_data = [47] + value_bytes + [47]
         elif self.parameter == "resistance":
             command_data = [48] + value_bytes + [48]
+        # print(command_data)
         return command_data
 
     def read_value(self):

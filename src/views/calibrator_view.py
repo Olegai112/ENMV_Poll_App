@@ -15,8 +15,8 @@ class CalibView():
 
         ttk.Label(self.master, text="Подключите калибратор...", anchor="center").place(rely=1/5, relwidth=1, relheight=4/5)
 
-    # def get_calib(self):
-    #     return self.calib
+    def get_calib(self):
+        return self.calib
 
     def add_calib_status_frame(self):
         self.calib_status_frame = tk.Frame(self.master)
@@ -28,7 +28,7 @@ class CalibView():
         self.calib_status_chbtn_var = tk.BooleanVar(value=False)
 
         self.calib_status_chbtn = ttk.Checkbutton(self.calib_status_frame, text="Калибратор", variable=self.calib_status_chbtn_var, command=self.connect_to_calib_thread)
-        self.calib_status_label = ttk.Label(self.calib_status_frame, text="Отключен", foreground="red", background="#FFCDD2", anchor="c")
+        self.calib_status_label = ttk.Label(self.calib_status_frame, text="Отключен", foreground="red", background="#FFCDD2", anchor="center")
 
         self.calib_status_chbtn.grid(row=0, column=0, sticky="nsew")
         self.calib_status_label.grid(row=0, column=1, sticky="e")
@@ -41,7 +41,10 @@ class CalibView():
         self.connect_to_calib_tread = threading.Thread(target=lambda: self.connect_to_calib(callback = callback), daemon=True)
         # self.connection_check_thread = threading.Thread(target=self.connection_check, daemon=True)
         if precision_research_flag != None:
-            self.calib_status = True
+            if precision_research_flag:
+                self.calib_status = True
+            else:
+                self.calib_status = False
 
         else:
             self.calib_status = self.calib_status_chbtn_var.get()
@@ -51,11 +54,12 @@ class CalibView():
         if self.calib_status:
             while True:
                 try:
-                    self.calib.connect()
+                    if not self.calib.client:
+                        self.calib.connect()
                     break
                 except Exception as e:
-                    print(e)
-                    sleep(1)
+                    print(f"connect{e}")
+                    break
 
             # while True:
             #     try:
@@ -72,19 +76,19 @@ class CalibView():
         else:
             try:
                 self.calib.disconnect()
+                self.calib.client = None
             except Exception as e:
-                print(e)
-                self.calib.client.is_open = False
+                print(f"disconnect{e}")
 
-        if self.calib.client.is_open:
-            self.master.after(0, self.calib_status_label.config(text="Подключен", foreground="green", background="#90feb5", anchor="c"))
-            self.add_calib_work_frame()
-            callback(self.calib)
+        if self.calib.client:
+            self.master.after(0, self.calib_status_label.config(text="Подключен", foreground="green", background="#90feb5", anchor="center"))
+            self.master.after(0, self.add_calib_work_frame())
+            if callback != None:
+                callback(self.calib)
             # self.connection_check_thread.start()
         else:
-            self.master.after(0, self.calib_status_label.config(text="Отключен", foreground="red", background="#FFCDD2", anchor="c"))
-            if hasattr(self, "calib_work_frame"):
-                self.calib_work_frame.destroy()
+            self.master.after(0, self.calib_status_label.config(text="Отключен", foreground="red", background="#FFCDD2", anchor="center"))
+            self.calib_work_frame.destroy()
 
 
     # def connection_check(self):
@@ -98,7 +102,7 @@ class CalibView():
     #             except Exception as e:
     #                 print(e)
     #                 self.calib.client.is_open = False
-    #             self.master.after(0, self.calib_status_label.config(text="Отключен", foreground="red", background="#FFCDD2", anchor="c"))
+    #             self.master.after(0, self.calib_status_label.config(text="Отключен", foreground="red", background="#FFCDD2", anchor="center"))
 
 
     def add_calib_work_frame(self):
@@ -180,18 +184,18 @@ class CalibView():
             self.calib_workin_thread.start()
 
     def add_measure_vidgets(self):
-        self.measure_label = ttk.Label(self.calib_mode_frame, text="Измеренное значение", relief="ridge", anchor="c", padding=3, width=1)
-        self.measure_value_label = ttk.Label(self.calib_mode_frame, text="", relief="ridge", anchor="c", padding=3, background="black", foreground="white", width=1)
-        self.unit_label = ttk.Label(self.calib_mode_frame, text=self.unit, relief="ridge", anchor="c", padding=3, width=1)
+        self.measure_label = ttk.Label(self.calib_mode_frame, text="Измеренное значение", relief="ridge", anchor="center", padding=3, width=1)
+        self.measure_value_label = ttk.Label(self.calib_mode_frame, text="", relief="ridge", anchor="center", padding=3, background="black", foreground="white", width=1)
+        self.unit_label = ttk.Label(self.calib_mode_frame, text=self.unit, relief="ridge", anchor="center", padding=3, width=1)
 
         self.measure_label.grid(row=0, column=0, columnspan=2, sticky="nsew")
         self.measure_value_label.grid(row=0, column=2, sticky="nsew")
         self.unit_label.grid(row=0, column=3, sticky="nsew")
 
     def add_set_vidgets(self):
-        self.set_label = ttk.Label(self.calib_mode_frame, text="Установленное значение", relief="ridge", anchor="c", padding=3, width=1)
-        self.set_value_label = ttk.Label(self.calib_mode_frame, text="", relief="ridge", anchor="c", padding=3, background="black", foreground="white", width=1)
-        self.unit_label = ttk.Label(self.calib_mode_frame, text=self.unit, relief="ridge", anchor="c", padding=3, width=1)
+        self.set_label = ttk.Label(self.calib_mode_frame, text="Установленное значение", relief="ridge", anchor="center", padding=3, width=1)
+        self.set_value_label = ttk.Label(self.calib_mode_frame, text="", relief="ridge", anchor="center", padding=3, background="black", foreground="white", width=1)
+        self.unit_label = ttk.Label(self.calib_mode_frame, text=self.unit, relief="ridge", anchor="center", padding=3, width=1)
         self.to_set_value_label = ttk.Label(self.calib_mode_frame, text="Установить:", width=11)
         def validate_spinbox(char, action, current_text, new_text):
             """Разрешаем только цифры"""

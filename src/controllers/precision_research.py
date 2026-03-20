@@ -4,8 +4,6 @@ from src.models.calibrator import Calibrator
 from src.services.data_collect import writer
 
 def precision_research(device, calibrator):
-    # device.connect()
-    # calib.connect()
 
     two_pass = config.get("TWO_PASS")
     negative_start = config.get("NEGATIVE_START") # TODO float
@@ -31,7 +29,7 @@ def precision_research(device, calibrator):
                 value += step
 
 
-    points = negative_start, negative_end, negative_step
+    points = positive_start, positive_end, positive_step
 
     if device.ao_mode != "OFF" :
 
@@ -79,12 +77,9 @@ def precision_research(device, calibrator):
             if not two_pass:
                 break
             else:
-                points = positive_start, positive_end, positive_step
+                points = negative_start, negative_end, negative_step
                 two_pass = False
                 input("Меняй полярность!")
-
-        calibrator.disconnect()
-        device.disconnect()
 
 if __name__ == "__main__":
     precision_research()
