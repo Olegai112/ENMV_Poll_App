@@ -51,14 +51,14 @@ class Device:
     def send(self, request_data = None):
 
         if request_data == "ping":
-            request_data = b'\x00\x03\x00\x00\x00\x00E\xca'
+            request_data = b'\x00\x01\x00\x00\x00\x00E\xca'
 
 
         elif not self.manually_send:
             if self.ao_mode == 'OFF':
                 request_data = int(self.slave_id).to_bytes(1) + bytes.fromhex(self.function) + int(self.start_adress).to_bytes(2) + int(self.reg_count).to_bytes(2)
             elif self.ao_mode == 'ENMV':
-                request_data = self.slave_id + b'e\xa73\x00\x03\x06' +  self.ao_range.to_bytes(1) + self.ao_coefficients.to_bytes(1) + pack('<f', request_data)
+                request_data = int(self.slave_id).to_bytes(1) + b'e\xa73\x00\x03\x06' +  self.ao_range.to_bytes(1) + self.ao_coefficients.to_bytes(1) + pack('<f', request_data)
             elif self.ao_mode == 'ESX':
                 request_data = self.ao_esx_id.to_bytes(1) + b'\x03\x04' + pack('>f', request_data) # !возможно ошибка с big-endian!
 
@@ -76,6 +76,7 @@ class Device:
             request = bytes([1, 0, len(no_header), 0]) + no_header
             hid_data = request.ljust(64, b'\x00')
             self.client.write(hid_data)
+        # print(request)
         return request
 
     def recieve(self):
@@ -97,6 +98,7 @@ class Device:
             if len(response) >= 7:
                 raw_values = packet1[7:]+packet2[2:]
                 raw_values = raw_values[:len(raw_values) - 2]
+        # print(response)
         return response, raw_values
 
     def disconnect(self):

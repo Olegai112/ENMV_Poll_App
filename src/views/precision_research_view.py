@@ -1,17 +1,18 @@
 import tkinter as tk
-from logging import disable
 from tkinter import ttk
 
 from time import sleep
 
 from src.services.load_settings import Settings
 from src.controllers.precision_research import precision_research
+from src.services.data_collect import DataCollector
 
 class PrecisionResearch():
-    def __init__(self, master, connection, calibrator):
+    def __init__(self, master, connection, calibrator, device_poll):
         self.master = master
         self.connection = connection
         self.calibrator = calibrator
+        self.device_poll = device_poll
 
         self.add_main_frame()
 
@@ -27,27 +28,38 @@ class PrecisionResearch():
 
         self.selected_ao_mode = tk.StringVar(value="ESX")
 
-        self.esx_rbtn = ttk.Radiobutton(self.header_frame, variable=self.selected_ao_mode, value="ESX", state="disable")
+        self.esx_rbtn = ttk.Radiobutton(self.header_frame, variable=self.selected_ao_mode, value="ESX", state="disable", command=self.add_spec_options_widgets)
         self.esx_rbtn.pack(side="left")
         self.esx_label = ttk.Label(self.header_frame, text="ESX")
         self.esx_label.pack(side="left")
 
-        self.enmv_rbtn = ttk.Radiobutton(self.header_frame, variable=self.selected_ao_mode, value="ENMV", state="disable")
+        self.enmv_rbtn = ttk.Radiobutton(self.header_frame, variable=self.selected_ao_mode, value="ENMV", state="disable", command=self.add_spec_options_widgets)
         self.enmv_rbtn.pack(side="left")
         self.enmv_label = ttk.Label(self.header_frame, text="ENMV")
         self.enmv_label.pack(side="left")
 
+        self.calib_parameterers = {"I": "current", "U": "voltage", "R": "resistance"}
+        self.calib_parameter_combobox = ttk.Combobox(self.header_frame, values=list(self.calib_parameterers.keys()), justify="center", state="readonly", width=3)
+        self.calib_parameter_combobox.set("I")
+        self.calib_parameter_combobox.pack(side="left", expand=True)
+
         self.two_pass_chbtn_var = tk.BooleanVar(value=False)
         self.two_pass_chbtn = ttk.Checkbutton(self.header_frame, text="Второй проход", variable=self.two_pass_chbtn_var, command=self.second_pass)
-        self.two_pass_chbtn.pack(side="right")
+        self.two_pass_chbtn.pack(side="left", expand=True)
 
-        self.settings_frame = tk.Frame(self.master, bg="green") # main
-        self.settings_frame.pack(fill="both", expand=True)
+        self.channel_scope_psinbox = ttk.Spinbox(self.header_frame, from_=1, to=16, increment=1, justify="center", width=3)
+        self.channel_scope_psinbox.set(1)
+        self.channel_scope_psinbox.pack(side="right")
+        self.channel_scope_label = ttk.Label(self.header_frame, text="Канал")
+        self.channel_scope_label.pack(side="right")
 
-        self.settings_frame.columnconfigure(index=0, weight=0)
-        self.settings_frame.columnconfigure(index=1, weight=1)
-        self.settings_frame.columnconfigure(index=2, weight=1)
-        self.settings_frame.columnconfigure(index=3, weight=1)
+        self.settings_frame = tk.Frame(self.master) # main
+        self.settings_frame.pack(fill="both")
+
+        self.settings_frame.columnconfigure(index=0, weight=1, uniform='col')
+        self.settings_frame.columnconfigure(index=1, weight=1, uniform='col')
+        self.settings_frame.columnconfigure(index=2, weight=1, uniform='col')
+        self.settings_frame.columnconfigure(index=3, weight=1, uniform='col')
         self.settings_frame.rowconfigure(index=0, weight=1)
         self.settings_frame.rowconfigure(index=1, weight=1)
         self.settings_frame.rowconfigure(index=2, weight=1)
@@ -60,9 +72,9 @@ class PrecisionResearch():
         self.end_value_label.grid(column=0, row=1, sticky="nsew")
         self.step_value_label.grid(column=0, row=2, sticky="nsew")
 
-        self.start_value_spibox = ttk.Spinbox(self.settings_frame, from_=0, to=100.0, increment=1, justify="center", width=8)
-        self.end_value_spibox = ttk.Spinbox(self.settings_frame, from_=0, to=100.0, increment=1, justify="center", width=8)
-        self.step_value_spibox = ttk.Spinbox(self.settings_frame, from_=0, to=100.0, increment=1, justify="center", width=8)
+        self.start_value_spibox = ttk.Spinbox(self.settings_frame, from_=-100, to=100.0, increment=1, justify="center", width=8)
+        self.end_value_spibox = ttk.Spinbox(self.settings_frame, from_=-100, to=100.0, increment=1, justify="center", width=8)
+        self.step_value_spibox = ttk.Spinbox(self.settings_frame, from_=-100, to=100.0, increment=1, justify="center", width=8)
 
         self.start_value_spibox.set(Settings.get("POSITIVE_START"))
         self.end_value_spibox.set(Settings.get("POSITIVE_END"))
@@ -80,16 +92,28 @@ class PrecisionResearch():
         self.second_pass_end_value_spibox.set(Settings.get("NEGATIVE_END"))
         self.second_pass_step_value_spibox.set(Settings.get("NEGATIVE_STEP"))
 
-        self.second_pass_start_value_spibox.grid(column=3, row=0)
-        self.second_pass_end_value_spibox.grid(column=3, row=1)
-        self.second_pass_step_value_spibox.grid(column=3, row=2)
+        self.second_pass_start_value_spibox.grid(column=2, row=0)
+        self.second_pass_end_value_spibox.grid(column=2, row=1)
+        self.second_pass_step_value_spibox.grid(column=2, row=2)
+
+        self.spec_options_frame = tk.Frame(self.settings_frame)
+        self.spec_options_frame.grid(column=3, row=0, rowspan=3, sticky="nsew")
+        self.add_spec_options_widgets()
+        for widget in self.spec_options_frame.winfo_children():
+            widget.config(state="disabled")
+
+        self.spec_options_frame.columnconfigure(index=0, weight=1)
+        self.spec_options_frame.columnconfigure(index=1, weight=1)
+        self.spec_options_frame.columnconfigure(index=2, weight=1)
+        self.spec_options_frame.rowconfigure(index=0, weight=1)
+        self.spec_options_frame.rowconfigure(index=1, weight=1)
 
         self.footer_frame = tk.Frame(self.master) # footer
         self.footer_frame.pack(fill="x")
 
-        self.start_btn = ttk.Button(self.footer_frame, text="Старт", command=self.precision_research_start)
+        self.start_btn = ttk.Button(self.footer_frame, text="Пуск", command=self.precision_research_start)
         self.start_btn.pack(side="right")
-        self.pause_btn = ttk.Button(self.footer_frame, text="Пауза")
+        self.pause_btn = ttk.Button(self.footer_frame, text="Пауза", command=self.save_settings)
         self.pause_btn.pack(side="right")
         self.stop_btn = ttk.Button(self.footer_frame, text="Стоп")
         self.stop_btn.pack(side="right")
@@ -98,12 +122,17 @@ class PrecisionResearch():
 
     def precision_research_start(self):
         self.save_settings()
+        self.device_poll.save_poll_settings()
+
+        self.writer = DataCollector()
 
         self.device = self.connection.get_device()
-        if self.device == None:
-            self.connection.connect()
-            self.connection.config_frame_var()
-            self.device = self.connection.get_device()
+        if self.device != None:
+            self.connection.disconnect()
+        self.connection.connect()
+        self.connection.config_frame_var()
+        self.device = self.connection.get_device()
+
 
         self.calib = self.calibrator.get_calib()
         if not self.calib.client:
@@ -111,12 +140,14 @@ class PrecisionResearch():
         else:
             self.precision_research_callback(self.calib)
 
+        Settings.push("device", "AO_MODE", changed_setting="OFF")
+
     def precision_research_callback(self, calib):
         self.calib = calib
-        self.calib.parameter = "current"
-        precision_research(self.device, self.calib)
+        self.calib.parameter = self.calib_parameterers[self.calib_parameter_combobox.get()]
+        precision_research(self.device, self.calib, self.writer)
         self.calibrator.connect_to_calib_thread(precision_research_flag=False)
-        self.connection.disconnect()
+
 
     def second_pass(self):
         second_pass = self.two_pass_chbtn_var.get()
@@ -139,15 +170,70 @@ class PrecisionResearch():
         Settings.push("NEGATIVE_END", changed_setting=float(self.second_pass_end_value_spibox.get()))
         Settings.push("NEGATIVE_STEP", changed_setting=float(self.second_pass_step_value_spibox.get()))
 
+        Settings.push("TWO_PASS", changed_setting=self.two_pass_chbtn_var.get())
+
+        Settings.push("CHANEL_SCOPE", changed_setting=int(self.channel_scope_psinbox.get()))
+
         if self.ao_chbtn_var.get():
             Settings.push("device", "AO_MODE", changed_setting=self.selected_ao_mode.get())
-        else:
-            Settings.push("device", "AO_MODE", changed_setting="OFF")
+            if self.selected_ao_mode.get() == "ESX":
+                Settings.push("device", "AO_ESX_ID", changed_setting=int(self.esx_slave_id_spinbox.get()))
+            else:
+                Settings.push("device", "SLAVE_ID", changed_setting=int(self.enmv_slave_id_spinbox.get()))
+                Settings.push("device", "AO_RANGE", changed_setting=self.ranges.index(self.enmv_range_combobox.get()))
+
 
     def set_ao(self):
         if self.ao_chbtn_var.get():
-            self.esx_rbtn.config(state="enable")
-            self.enmv_rbtn.config(state="enable")
+            self.esx_rbtn.config(state="enabled")
+            self.enmv_rbtn.config(state="enabled")
+
+            for widget in self.device_poll.command_const_frame.winfo_children():
+                widget.config(state="disabled")
+            for widget in self.device_poll.command_frame.winfo_children():
+                widget.config(state="disabled")
+
+            for widget in self.spec_options_frame.winfo_children():
+                widget.config(state="enabled")
+
+            self.two_pass_chbtn.config(state="disabled")
+            self.channel_scope_psinbox.config(state="disabled")
         else:
-            self.esx_rbtn.config(state="disable")
-            self.enmv_rbtn.config(state="disable")
+            self.esx_rbtn.config(state="disabled")
+            self.enmv_rbtn.config(state="disabled")
+
+            for widget in self.device_poll.command_const_frame.winfo_children():
+                widget.config(state="enabled")
+            for widget in self.device_poll.command_frame.winfo_children():
+                widget.config(state="enabled")
+            self.device_poll.radiobuttons()
+
+            for widget in self.spec_options_frame.winfo_children():
+                widget.config(state="disabled")
+
+            self.two_pass_chbtn.config(state="enabled")
+            self.channel_scope_psinbox.config(state="enabled")
+
+    def add_spec_options_widgets(self):
+        for widget in self.spec_options_frame.winfo_children():
+            widget.destroy()
+
+        if self.selected_ao_mode.get() == "ESX":
+            self.esx_slave_id_label = ttk.Label(self.spec_options_frame, text="Адрес опроса ESX:", anchor="center")
+            self.esx_slave_id_label.grid(column=0, columnspan=2, row=0, sticky="nsew")
+
+            self.esx_slave_id_spinbox = ttk.Spinbox(self.spec_options_frame, from_=0, to=255, increment=1, justify="center", width=4)
+            self.esx_slave_id_spinbox.set(1)
+            self.esx_slave_id_spinbox.grid(column=0, columnspan=2, row=1,rowspan=2)
+
+        else:
+            self.enmv_slave_id_label = ttk.Label(self.spec_options_frame, text="ЭНМВ ID:", anchor="center")
+            self.enmv_slave_id_label.grid(column=0, row=0, sticky="nsew")
+            self.enmv_slave_id_spinbox = ttk.Spinbox(self.spec_options_frame, from_=0, to=255, increment=1, justify="center", width=4)
+            self.enmv_slave_id_spinbox.set(1)
+            self.enmv_slave_id_spinbox.grid(column=1, row=0, sticky="nsew")
+            self.enmv_range_label = ttk.Label(self.spec_options_frame, text="Диапазон:", anchor="center")
+            self.enmv_range_label.grid(column=0, columnspan=2, row=1, sticky="nsew")
+            self.ranges = ["-5...5 мА", "-20...20 мА", "-24...24 мА", "0...5 мА", "0...20 мА", "0...24 мА", "4...20 мА"]
+            self.enmv_range_combobox = ttk.Combobox(self.spec_options_frame, values=self.ranges, justify="center", state="readonly")
+            self.enmv_range_combobox.grid(column=0, columnspan=2, row=2, sticky="nsew")

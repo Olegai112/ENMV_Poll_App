@@ -6,12 +6,8 @@ from datetime import datetime
 
 class DataCollector:
     def __init__(self):
-        self.path = config.get("PATH")
-        self.filename = config.get("FILENAME") + '.csv'
-        if  self.path == "":
-            self.path = Path(__file__).parents[2] / 'data'
-        if  self.filename == "":
-            self.filename = str(datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        self.path = Path(__file__).parents[2] / 'data'
+        self.filename = str(datetime.now().strftime("%Y-%m-%d_%H-%M-%S")) + '_' + config.get("FILENAME") + '.csv'
 
     def write_data(self, data):
         if not Path(self.path / self.filename).exists():
@@ -26,8 +22,6 @@ class DataCollector:
                 fieldnames = ["Time"] + list(data.keys())
                 writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writerow({**{"Time":datetime.now().strftime("%H:%M:%S")}, **data})
-
-writer = DataCollector()
 
 
 

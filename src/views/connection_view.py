@@ -120,7 +120,10 @@ class Connection():
             Settings.push("device", "PID", changed_setting = self.pid_entry.get())
 
         self.device = Device(**Settings.config["device"])
-        self.device.connect()
+        try:
+            self.device.connect()
+        except Exception as e:
+            print(e)
 
         self.device.send("ping")
         ping_responce = self.device.recieve()
