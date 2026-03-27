@@ -6,7 +6,7 @@ from src.views.calibrator_view import CalibView
 from src.views.device_poll_view import DevicePoll
 from src.views.console_view import Console
 # from src.views.graphs_view import Graphs
-from src.views.precision_research_view import PrecisionResearch
+# from src.views.precision_research_view import PrecisionResearch
 from src.views.data_save_view import DataSave
 
 
@@ -15,6 +15,7 @@ class MainWindow():
     def __init__(self):
         self.root = tk.Tk()
         self.root.geometry("1000x320")
+        self.root.resizable(False, False)
 
         self.frame_connection = tk.Frame(self.root)
         self.connection = Connection(self.frame_connection)
@@ -26,10 +27,10 @@ class MainWindow():
         self.calibrator = CalibView(self.frame_calibrator)
 
         self.frame_precision_research = tk.Frame(self.root)
-        self.precision_research = PrecisionResearch(self.frame_precision_research, self.connection, self.calibrator, self.device_poll)
+        # self.precision_research = PrecisionResearch(self.frame_precision_research, self.connection, self.calibrator, self.device_poll, self.root)
 
         self.frame_data_save = tk.Frame(self.root)
-        self.data_save = DataSave(self.frame_data_save)
+        self.data_save = DataSave(self.frame_data_save, self.device_poll)
 
         # self.frame_graphs = tk.Frame(self.root, bg="yellow")
         # self.graphs = Graphs(self.frame_graphs)

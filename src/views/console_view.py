@@ -23,4 +23,4 @@ class Console:
         pass
 
     def clear(self):
-        self.text_area.delete(1.0, tk.END)
+        self.master.after(0, self.text_area.delete(1.0, tk.END))

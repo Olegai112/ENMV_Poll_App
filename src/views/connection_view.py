@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+import threading
+
 from src.services.load_settings import Settings
 from src.models.device import Device
 
@@ -98,14 +100,22 @@ class Connection():
         self.status_frame.place(rely=3 / 4, relheight=1 / 4, relwidth=1)
         self.status_label = ttk.Label(self.status_frame, text="Отключено", foreground="red", background="#FFCDD2", anchor="c")
 
-        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=self.connect, state="disabled")
+        self.connect_btn = ttk.Button(self.status_frame, text="Подключить", command=self.connect_thread_start, state="disabled")
         self.disconnect_btn = ttk.Button(self.status_frame, text="Отключить", command=self.disconnect, state="disabled")
 
         self.status_label.pack(side="left", fill="x", expand=True)
         self.disconnect_btn.pack(side="left", fill="x", expand=True)
         self.connect_btn.pack(side="left", fill="x", expand=True)
 
+    def connect_thread_start(self):
+        self.connect_thread = threading.Thread(target= self.connect, daemon=True)
+        self.connect_thread.start()
+
     def connect(self):
+        try:
+            self.disconnect()
+        except:
+            pass
         if self.chosed_protocol == self.rtu_btn:
             Settings.push("device", "PROTOCOL", changed_setting = self.rtu_btn["text"])
             Settings.push("device", "RTU_COM", changed_setting = self.com_combobox.get())
@@ -120,25 +130,31 @@ class Connection():
             Settings.push("device", "PID", changed_setting = self.pid_entry.get())
 
         self.device = Device(**Settings.config["device"])
+
         try:
             self.device.connect()
         except Exception as e:
-            print(e)
+            print(f"dev connect {e}")
+            return False
 
-        self.device.send("ping")
-        ping_responce = self.device.recieve()
+        ping_responce = [0,1]
         if ping_responce[0] != b'':
            self.status_label.config(text="Подключено", foreground="green", background="#90feb5")
            self.connect_btn.config(state="disabled")
            self.disconnect_btn.config(state="enabled")
            print(f"=Устройство (такое-то) подключено.\nПротокол: {self.device.protocol}\n")
+           return True
+        else:
+            print("no resp")
+            return False
+
 
     def disconnect(self):
-        self.device.disconnect()
         self.status_label.config(text="Отключено", foreground="red", background="#FFCDD2")
-        self.device = None
         self.connect_btn.config(state="enabled")
         self.disconnect_btn.config(state="disabled")
+        self.device.disconnect()
+        self.device = None
         print(f"=Устройство (такое-то) отключено.\n")
 
     def config_frame_var(self, event=None):

@@ -3,6 +3,7 @@ from tkinter import ttk
 from src.services.load_settings import Settings
 import time
 from src.services.data_collect import DataCollector
+import threading
 
 class DevicePoll():
     def __init__(self, master, connection):
@@ -64,7 +65,7 @@ class DevicePoll():
         self.delay_entry = ttk.Entry(self.send_frame, width=4)
         self.delay_entry.insert(0, str(Settings.get("DELAY")))
         self.delay_entry.config(state="disabled")
-        self.delay_chbtn = ttk.Checkbutton(self.send_frame, text="Delay, мс", variable=self.delay_chbtn_var, command= lambda:self.checkbuttons_entry_state(self.delay_chbtn_var.get(), self.delay_entry))
+        self.delay_chbtn = ttk.Checkbutton(self.send_frame, text="Delay, с", variable=self.delay_chbtn_var, command= lambda:self.checkbuttons_entry_state(self.delay_chbtn_var.get(), self.delay_entry))
 
         self.points_chbtn_var = tk.BooleanVar(value=False)
         self.points_entry = ttk.Entry(self.send_frame, width=4)
@@ -75,7 +76,7 @@ class DevicePoll():
         self.float_chbtn_var = tk.BooleanVar(value=False)
         self.float_chbtn = ttk.Checkbutton(self.send_frame, text="float", variable=self.float_chbtn_var)
 
-        self.send_btn = ttk.Button(self.send_frame, command = self.modbus_request_mode, text="--->")
+        self.send_btn = ttk.Button(self.send_frame, command = self.modbus_request_mode_thread, text="--->")
 
         self.delay_chbtn.pack(side="left", expand=True)
         self.delay_entry.pack(side="left", expand=True)
@@ -88,53 +89,67 @@ class DevicePoll():
 
         self.radiobuttons()
 
+    def modbus_request_mode_thread(self):
+        self.connect_thread = threading.Thread(target=self.modbus_request_mode, daemon=True)
+        self.connect_thread.start()
+
     def modbus_request_mode(self):
-        self.device = self.connection.get_device()
-        self.save_poll_settings()
+        try:
+            self.device = self.connection.get_device()
+            self.save_poll_settings()
 
-        self.writer = DataCollector()
-        selected = self.selected_send_mode.get()
-        Settings.push("device", "MANUALLY_SEND", changed_setting=selected)
-        self.device.manually_send = Settings.get("device")["MANUALLY_SEND"]
+            save_device_poll_flag = Settings.get("SAVE_MODBUS_POLL_FLAG")
 
-        self.points = Settings.get("NUM_OF_POINTS")
-        counter = 1
-        self.delay = Settings.get("DELAY")
-        next_time = time.perf_counter()
+            self.writer = DataCollector()
+            selected = self.selected_send_mode.get()
+            Settings.push("device", "MANUALLY_SEND", changed_setting=selected)
+            self.device.manually_send = Settings.get("device")["MANUALLY_SEND"]
 
-        if not self.points_chbtn_var.get():
-            self.points = 1
-        if not self.delay_chbtn_var.get():
-            self.delay = 0
-        while counter <= int(self.points):
-            cur_time = time.perf_counter()
-            if cur_time < next_time:
-                delay_correct = next_time - cur_time
-                time.sleep(delay_correct)
+            self.points = Settings.get("NUM_OF_POINTS")
+            counter = 1
+            self.delay = Settings.get("DELAY")
 
-            cycle_end = time.perf_counter()
-            cycle_duration = cycle_end - cur_time
+            if not self.points_chbtn_var.get():
+                self.points = 1
+            if not self.delay_chbtn_var.get():
+                self.delay = 0
 
-            if selected:
-                req = self.device.send(bytes.fromhex(self.command_entry.get()))
-            else:
-                req = self.send_modbus_request()
-            print(f"={counter}=\nЗапрос: {req.hex()}")
-            counter += 1
+            self.next_time = time.perf_counter()
 
-            resp = self.device.recieve()
-            print(f"Ответ: {resp[0].hex()}, {cycle_duration * 1000:.1f} мс\n")
+            while counter <= int(self.points):
+                cur_time = time.perf_counter()
+                if cur_time < self.next_time:
+                    correct_delay = self.next_time - cur_time
+                    time.sleep(correct_delay)
 
-            values = self.device.value_unpack_float(resp[1])
+                if selected:
+                    req = self.device.send(bytes.fromhex(self.command_entry.get()))
+                else:
+                    req = self.send_modbus_request()
+                print(f"={counter}=\nЗапрос: {req.hex()}")
 
-            if self.float_chbtn_var.get():
-                print(f"Каналы:")
-                for i in values.keys():
-                    print(i, values[i])
-                print()
-            self.writer.write_data(data = values)
+                resp = self.device.recieve()
 
-            next_time += self.delay
+                cycle_duration = time.perf_counter() - cur_time
+
+                print(f"Ответ: {resp[0].hex()}, {cycle_duration * 1000:.1f} мс\n")
+
+                if self.float_chbtn_var.get():
+                    values = self.device.value_unpack_float(resp[1])
+                    print(f"Каналы:")
+                    for i in values.keys():
+                        print(i, values[i])
+                    print()
+                    if save_device_poll_flag:
+                        self.writer.write_data(data = values)
+
+                self.next_time += self.delay
+                counter += 1
+
+            if save_device_poll_flag:
+                print(f"\nФайл '{self.writer.filename}' сохранен в data.")
+        except Exception as e:
+            print(f"poll poll:{e}")
 
     def send_modbus_request(self):
         self.device.slave_id = self.slave_id_entry.get()

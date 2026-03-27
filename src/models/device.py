@@ -1,6 +1,12 @@
 from serial import Serial
 from struct import pack, unpack
 import socket, hid
+import time
+import threading
+import queue
+
+from serial.tools.miniterm import Printable
+
 
 class Device:
     client = None
@@ -47,12 +53,12 @@ class Device:
         elif self.protocol == 'USB':
             self.client = hid.device()
             self.client.open(int(self.vid, 16), int(self.pid, 16))
+            self.client.set_nonblocking(True)
 
     def send(self, request_data = None):
 
         if request_data == "ping":
             request_data = b'\x00\x01\x00\x00\x00\x00E\xca'
-
 
         elif not self.manually_send:
             if self.ao_mode == 'OFF':
@@ -61,6 +67,7 @@ class Device:
                 request_data = int(self.slave_id).to_bytes(1) + b'e\xa73\x00\x03\x06' +  self.ao_range.to_bytes(1) + self.ao_coefficients.to_bytes(1) + pack('<f', request_data)
             elif self.ao_mode == 'ESX':
                 request_data = self.ao_esx_id.to_bytes(1) + b'\x03\x04' + pack('>f', request_data) # !возможно ошибка с big-endian!
+                print(request_data.hex())
 
         if self.protocol == 'RTU':
             request = request_data + self.calculate_crc(request_data)
@@ -71,10 +78,14 @@ class Device:
             # print('Имитация отправки данных')
             # print(request.hex())
         elif self.protocol == 'USB':
-            # _ = self.client.read(64, 100)
+            # _ = self.client.read(64)
             no_header = request_data + self.calculate_crc(request_data)
             request = bytes([1, 0, len(no_header), 0]) + no_header
             hid_data = request.ljust(64, b'\x00')
+
+            self.client.close()
+            self.client.open(int(self.vid, 16), int(self.pid, 16))
+
             self.client.write(hid_data)
         # print(request)
         return request
@@ -92,13 +103,22 @@ class Device:
             # response = bytes.fromhex('00 01 00 00 00 23 01 03 20 41 bc 00 00 42 37 33 33 42 ca 99 9a 42 82 66 66 42 f6 e6 66 44 29 9a 40 40 49 0f db 40 2d f8 93')
             # raw_values = response[9:]
         elif self.protocol == 'USB':
-            packet1 = bytes(self.client.read(64, 1024)).rstrip(b'\x00')
-            packet2 = bytes(self.client.read(64, 1024)).rstrip(b'\x00')
-            response = packet1 + packet2
-            if len(response) >= 7:
-                raw_values = packet1[7:]+packet2[2:]
+            response = []
+            response_counter = 0
+            while True:
+                data = self.client.read(64, timeout_ms=100)
+                if data == []:
+                    break
+                response.extend(bytes(data).rstrip(b'\x00'))
+                response_counter += 1
+            response = bytes(response)
+
+            if response_counter >= 2:
+                raw_values = response[:64][7:] + response[64:][2:]
                 raw_values = raw_values[:len(raw_values) - 2]
-        # print(response)
+            else:
+                raw_values = response[7:len(response)-2]
+
         return response, raw_values
 
     def disconnect(self):

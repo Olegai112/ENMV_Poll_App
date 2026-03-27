@@ -2,7 +2,7 @@ from src.services.load_settings import Settings
 import time
 
 
-def precision_research(device, calibrator, writer):
+def precision_research(device, calibrator, writer, change_progress_bar_var, change_polarity):
 
     two_pass = Settings.get("TWO_PASS")
     negative_start = Settings.get("NEGATIVE_START") # TODO float
@@ -18,7 +18,6 @@ def precision_research(device, calibrator, writer):
 
     units= {"current": "мА", "voltage": "В","resistance": "Ом"}
 
-
     def float_range(start, stop, step):
         if start <= stop:
             value = start
@@ -32,57 +31,37 @@ def precision_research(device, calibrator, writer):
                 yield round(value, 6)
                 value += step
 
-
-    points = positive_start, positive_end, positive_step
-
-    if device.ao_mode != "OFF":
-        print('Калибровка...')
-        calibrator.send_response(calibrator.measure_value(1))
-        for i in float_range(*points):
-            print(f"Установка... {i} {units[parameter]}")
-            device.send(i)
-            print()
-            counter = 0
-            while counter != 5:
-                current_value1 = calibrator.send_response(calibrator.measure_value())
-                current_value2 = calibrator.send_response(calibrator.measure_value())
-                print(f"{round(current_value2[1], 6)}...")
-                counter +=1
-                if abs(current_value2[1] - current_value1[1]) <= 0.00005:
-                    break
-            print(f"Установлено: {round(current_value2[1], 6)} {units[parameter]}")
-            print(f"Запрос измерений...")
-
-            next_time = time.perf_counter()
-
-            for num_of_point in range(1, num_of_points+1):
-                cur_time = time.perf_counter()
-                if cur_time < next_time:
-                    delay_correct = next_time - cur_time
-                    time.sleep(delay_correct)
-
-                cycle_end = time.perf_counter()
-                cycle_duration = cycle_end - cur_time
-
-                measured_value = calibrator.send_response(calibrator.measure_value())
-                print(f"Точка №{num_of_point}: {measured_value[1]} {units[parameter]}, {cycle_duration * 1000:.1f} мс")
-                writer.write_data(data = {"Reference": i, "Output_Value": measured_value[1]})
-
-                next_time += delay
-
-
+    if negative_step == 0 or positive_step == 0:
+        print("\nШаг не должен быть 0")
     else:
-        while True:
+        points = positive_start, positive_end, positive_step
+        current_step = positive_step
+
+        if device.ao_mode != "OFF":
+            progress_bar_maximum = positive_end / positive_step - positive_start
+            change_progress_bar_var(step = current_step, progress_bar_maximum=abs(progress_bar_maximum))
+
+            print('\nКалибровка...')
+            calibrator.send_response(calibrator.measure_value(1))
             for i in float_range(*points):
-                print(f"Установка... {float(i)} {units[parameter]}")
-                calibrator.send_response(calibrator.set_value(i))
-                while True:
-                    current_value = calibrator.send_response(calibrator.read_value())
-                    print(f"{round(current_value[1], 6)} {units[parameter]}...")
-                    if abs(current_value[1] - i) <= 0.0001:
+                print(f"\nУстановка... {i} {units[parameter]}")
+                device.send(i)
+                print()
+                counter = 0
+                while counter != 5:
+                    current_value1 = calibrator.send_response(calibrator.measure_value())
+                    current_value2 = calibrator.send_response(calibrator.measure_value())
+
+                    print(f"{round(current_value2[1], 6)}...")
+                    counter +=1
+                    if abs(current_value2[1] - current_value1[1]) <= 0.00005:
                         break
-                print(f"Установлено: {round(current_value[1], 6)} {units[parameter]}")
-                print(f"Запрос измерений...")
+
+                    if counter == 5:
+                        break
+
+                print(f"\nУстановлено: {round(current_value2[1], 6)} {units[parameter]}")
+                print(f"\nЗапрос измерений...")
 
                 next_time = time.perf_counter()
 
@@ -92,24 +71,74 @@ def precision_research(device, calibrator, writer):
                         delay_correct = next_time - cur_time
                         time.sleep(delay_correct)
 
-                    cycle_end = time.perf_counter()
-                    cycle_duration = cycle_end - cur_time
-
-                    device.send()
-                    device_resp = device.recieve()
-                    unpack_value = device.value_unpack_float(device_resp[1])
-
-                    print(f"Точка №{num_of_point}: {unpack_value[list(unpack_value.keys())[chanel_scope-1]]} {units[parameter]}, {cycle_duration * 1000:.1f} мс")
-                    writer.write_data(data = {**{"Calibrator":current_value[1]},**{list(unpack_value.keys())[chanel_scope-1]:unpack_value[list(unpack_value.keys())[chanel_scope-1]]}}) # **device.value_unpack_float(device_resp[1])
+                    measured_value = calibrator.send_response(calibrator.measure_value())
+                    cycle_duration = time.perf_counter() - cur_time
+                    print(f"Точка №{num_of_point}: {measured_value[1]} {units[parameter]}, {cycle_duration * 1000:.1f} мс")
+                    writer.write_data(data = {"Reference": i, "Output_Value": measured_value[1]})
 
                     next_time += delay
 
-            if not two_pass:
-                break
-            else:
-                points = negative_start, negative_end, negative_step
-                two_pass = False
-                input("Меняй полярность!")
+                change_progress_bar_var(step = current_step)
+
+            print(f"\nФайл '{writer.filename}' сохранен в data.")
+
+        else:
+            progress_bar_maximum = positive_end / positive_step - positive_start
+            if two_pass:
+                progress_bar_maximum = progress_bar_maximum + negative_end / negative_step - negative_start
+            change_progress_bar_var(step = current_step, progress_bar_maximum=abs(progress_bar_maximum))
+
+            while True:
+                for i in float_range(*points):
+                    print(f"\nУстановка... {float(i)} {units[parameter]}")
+                    calibrator.send_response(calibrator.set_value(i))
+
+                    counter = 0
+                    while counter < 5:
+                        current_value = calibrator.send_response(calibrator.read_value())
+                        print(f"{round(current_value[1], 6)} {units[parameter]}...")
+                        if abs(current_value[1] - i) <= 0.0001:
+                            break
+                        counter += 1
+                    if counter == 5:
+                        break
+
+                    print(f"\nУстановлено: {round(current_value[1], 6)} {units[parameter]}")
+                    print(f"\nЗапрос измерений...")
+
+                    next_time = time.perf_counter()
+
+                    for num_of_point in range(1, num_of_points+1):
+                        cur_time = time.perf_counter()
+                        if cur_time < next_time:
+                            delay_correct = next_time - cur_time
+                            time.sleep(delay_correct)
+
+                        device.send()
+                        device_resp = device.recieve()
+                        unpack_value = device.value_unpack_float(device_resp[1])
+                        cycle_duration = time.perf_counter() - cur_time
+                        try:
+                            print(f"Точка №{num_of_point}: {unpack_value[list(unpack_value.keys())[chanel_scope-1]]} {units[parameter]}, {cycle_duration * 1000:.1f} мс")
+                        except Exception as e:
+                            print(f"no this ch:{e}")
+                            return
+                        writer.write_data(data = {**{"Calibrator":current_value[1]},**{list(unpack_value.keys())[chanel_scope-1]:unpack_value[list(unpack_value.keys())[chanel_scope-1]]}}) # **device.value_unpack_float(device_resp[1])
+
+                        next_time += delay
+
+                    change_progress_bar_var(step = current_step)
+
+                if not two_pass:
+                    break
+                else:
+                    points = negative_start, negative_end, negative_step
+                    current_step = negative_step
+                    two_pass = False
+                    # input("Меняй полярность!")
+                    change_polarity()
+
+            print(f"\nФайл '{writer.filename}' сохранен в data.")
 
 if __name__ == "__main__":
     precision_research()
